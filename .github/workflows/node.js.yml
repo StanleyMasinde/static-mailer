@@ -24,6 +24,7 @@ jobs:
       with:
         node-version: ${{ matrix.node-version }}
         cache: 'npm'
+    - run: sudo bash < <(curl -sL https://raw.githubusercontent.com/axllent/mailpit/develop/install.sh)
     - run: sudo systemctl start mysql.service
     - run: mysql -u root -proot  -e "create database staticsend"
     - run: cp .env.example .env
