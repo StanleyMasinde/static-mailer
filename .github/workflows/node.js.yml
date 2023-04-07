@@ -24,6 +24,8 @@ jobs:
       with:
         node-version: ${{ matrix.node-version }}
         cache: 'npm'
+    - name: Mailpit server for Github actions
+      uses: StanleyMasinde/mailpit-action@v1
     - run: sudo systemctl start mysql.service
     - run: mysql -u root -proot  -e "create database staticsend"
     - run: cp .env.example .env
