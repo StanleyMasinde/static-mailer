@@ -1,0 +1,22 @@
+Thanks for trying out [Static Mailer]. We’ve pulled together some information and resources to help you get started.
+
+[Static Mailer] ( https://staticmailer.com )
+
+******************
+Welcome, {{name}}!
+******************
+
+Thanks for trying [Static Mailer]. We’re thrilled to have you on board. To get the most out of [Static Mailer], do this primary next step:
+
+Do this Next ( {{ action_url }} )
+
+Thanks,
+[Jules] and the [Static Mailer] team
+
+P.S. Need immediate help getting started? Check out our help documentation ( {{ help_url }} ). Or, just reply to this email, the [Static Mailer] support team is always ready to help!
+
+If you’re having trouble with the button above, copy and paste the URL below into your web browser.
+
+{{action_url}}
+
+[Static Mailer, LLC]

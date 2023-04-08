@@ -1,0 +1,8 @@
+[Staticmailer] ( https://staticsmailer.com )
+
+{{body}}
+
+
+By {{commenter_name}} at {{timestamp}}
+
+[staticmailer, LLC]

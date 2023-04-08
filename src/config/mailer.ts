@@ -1,4 +1,8 @@
+import { readFileSync } from 'fs'
 import nodemailer from 'nodemailer'
+import { renderFile } from 'pug'
+
+
 let mailerPort: number
 let mailerSecure: boolean
 if (process.env.MAILER_PORT) {
@@ -6,7 +10,7 @@ if (process.env.MAILER_PORT) {
 } else {
     mailerPort = 1025
 }
-if(process.env.MAILER_SECURE && process.env.MAILER_SECURE == "true") {
+if (process.env.MAILER_SECURE && process.env.MAILER_SECURE == "true") {
     mailerSecure = true
 } else {
     mailerSecure = false
@@ -29,17 +33,24 @@ const transport = nodemailer.createTransport({
  * @param body the email content
  * @returns bool
  */
-export const mailer = async (subject: string, email: string, message: string) => {
+export const mailer = async (subject: string, email: string, message: string, template: string = 'deliver') => {
+    const text = readFileSync(`./templates/${template}.txt`)
     const tx = await transport.sendMail({
-        subject,
+        subject: `[StaticMailer] - ${subject}`,
         replyTo: email,
-        text: message,
-        to: 'info@example.com',
+        text,
+        html: renderFile(`./templates/${template}.pug`, { 
+            pretty: true,
+            email,
+            message,
+            timestamp: new Date()
+        }),
+        to: 'info@staticmailer.com',
         from: {
-            name : 'Staticsend',
-            address: 'no-reply@staticsend.com'
+            name: 'Static Mailer',
+            address: 'no-reply@staticmailer.com'
         }
     })
 
-   return true
+    return true
 }
