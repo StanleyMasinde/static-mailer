@@ -1,15 +1,21 @@
 import nodemailer from 'nodemailer'
 let mailerPort: number
+let mailerSecure: boolean
 if (process.env.MAILER_PORT) {
     mailerPort = +process.env.MAILER_PORT
 } else {
     mailerPort = 1025
 }
+if(process.env.MAILER_SECURE && process.env.MAILER_SECURE == "true") {
+    mailerSecure = true
+} else {
+    mailerSecure = false
+}
 
 const transport = nodemailer.createTransport({
     host: process.env.MAILER_HOST || "localhost",
     port: mailerPort,
-    secure: false,
+    secure: mailerSecure,
     auth: {
         user: process.env.MAILER_USERNAME,
         pass: process.env.MAILER_PASSWORD,
