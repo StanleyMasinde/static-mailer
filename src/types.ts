@@ -20,8 +20,18 @@ export interface UserTable {
     name: string,
     email: string,
     password: string,
-    created_at: string,
-    updated_at: string
+    created_at: Date,
+    updated_at: Date
+}
+
+export interface ApiKeyTable {
+    uuid: string,
+    user_id: number,
+    name: string,
+    key: string
+    created_at: Date,
+    updated_at: Date,
+    last_used_at: Date
 }
 
 export interface ValidationMessage {

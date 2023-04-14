@@ -28,24 +28,31 @@ const transport = nodemailer.createTransport({
 
 /**
  * Deliver a given email to the intended user
- * @param subject The email subject
- * @param email the email of the sender
- * @param body the email content
- * @returns bool
+ * @param recipientEmail 
+ * @param subject 
+ * @param senderEmail 
+ * @param message 
+ * @param template 
+ * @returns 
  */
-export const mailer = async (subject: string, email: string, message: string, template: string = 'deliver') => {
+export const mailer = async (recipientEmail: string, subject: string, senderEmail: string, message: string, template: string = 'deliver') => {
+    const timestamp =  new Date().toUTCString()
     const text = readFileSync(`./templates/${template}.txt`)
+    .toString()
+    .replaceAll('#{{ email }}', senderEmail)
+    .replaceAll('#{{ message }}', message)
+    .replaceAll('#{{ timestamp }}', timestamp)
     const tx = await transport.sendMail({
         subject: `[StaticMailer] - ${subject}`,
-        replyTo: email,
+        replyTo: senderEmail,
         text,
         html: renderFile(`./templates/${template}.pug`, { 
             pretty: true,
-            email,
+            email: senderEmail,
             message,
-            timestamp: new Date()
+            timestamp
         }),
-        to: 'info@staticmailer.com',
+        to: recipientEmail,
         from: {
             name: 'Static Mailer',
             address: 'no-reply@staticmailer.com'

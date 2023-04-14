@@ -88,8 +88,9 @@ export const authorize = async (ctx: Context, next: Next) => {
     const bearerToken = ctx.request.header['authorization']?.split(' ')[1]
     if (bearerToken) {
         try {
-            verifyToken(bearerToken)
-            await next()
+            const user = verifyToken(bearerToken)
+            ctx.state.user = user
+            return await next()
         } catch (err) {
             return sendUnauthorizedResponse();
         }

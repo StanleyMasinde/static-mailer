@@ -1,8 +1,7 @@
 [Staticmailer] ( https://staticsmailer.com )
 
-{{body}}
+## You have received a new message from #{{ email }}
+#{{ message }}
 
-
-By {{commenter_name}} at {{timestamp}}
-
+Message sent at #{{ timestamp }}
 [staticmailer, LLC]

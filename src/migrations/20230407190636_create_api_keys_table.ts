@@ -6,8 +6,9 @@ export async function up(knex: Knex): Promise<void> {
         .schema
         .createTable('api_keys', (table) => {
             table.uuid('uuid').unique().primary()
-            table.bigInteger('user_id').unsigned()
-            table.string('key').unique()
+            table.bigInteger('user_id').unsigned().notNullable().references('id').inTable('users')
+            table.string('name')
+            table.string('key').unique().notNullable().index('API_KEY_INDEX')
             table.timestamp('last_used_at')
             table.timestamps(true, true)
         })
