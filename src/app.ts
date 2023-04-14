@@ -3,20 +3,23 @@ import Koa from 'koa'
 import { koaBody } from 'koa-body'
 import { indexRoutes, allowedIndexMethods } from './routes'
 import { publicApiRoutes, allowedPublicApiMethods } from './routes/publicapi'
+import { authRoutes, allowedAuthMethods } from './routes/auth'
 
 // Configure dotenv
 dotEnv.config()
 
 
-const app = new Koa()
+const app = new Koa({ proxy: true })
 
 // Middlewares
 app.use(koaBody())
 // Routes 
 app.use(indexRoutes())
-.use(allowedIndexMethods())
-.use(publicApiRoutes())
-.use(allowedPublicApiMethods())
+    .use(allowedIndexMethods())
+    .use(publicApiRoutes())
+    .use(allowedPublicApiMethods())
+    .use(authRoutes())
+    .use(allowedAuthMethods())
 
 
 export default app
