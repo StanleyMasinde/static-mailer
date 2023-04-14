@@ -6,7 +6,7 @@
   "scripts": {
     "start": "node dist/server.js",
     "pretest": "tsc && knex migrate:up",
-    "test": "jest",
+    "test": "jest --forceExit",
     "build": "tsc"
   },
   "keywords": [
