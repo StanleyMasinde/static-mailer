@@ -75,4 +75,21 @@ describe('Authentication tests', () => {
             expect(response.status).toBe(401)
             expect(response.body.message).toBe('These credentials don\'t match our records')
     })
+
+    // test('Get the current user', async () => { // TODO This is pointless in the functionality is is here to test authorisation
+    //     const response = await application
+    //         .post('/auth/login')
+    //         .send({
+    //             email: user.email,
+    //             password: user.password
+    //         })
+    //         expect(response.status).toBe(200)
+    //         expect(response.body).toHaveProperty('token')
+
+    //         const authPasses = await application
+    //         .get('/auth/me')
+    //         .set('authorization', `Bearer ${response.body.token}`)
+
+    //         console.log("Response", authPasses.body);
+    // })
 })

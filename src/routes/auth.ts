@@ -1,5 +1,5 @@
 import koaRouter from "@koa/router"
-import { login, register } from "../actions/auth"
+import { authorize, login, me, register } from "../actions/auth"
 import { validate } from "../actions/validate"
 
 const router = new koaRouter({ prefix: '/auth' })
@@ -18,6 +18,8 @@ router.post('/login',
         password: 'required'
     }),
     login)
+
+router.get('/me', authorize, me)
 
 export const authRoutes = () => router.routes()
 export const allowedAuthMethods = () => router.allowedMethods()

@@ -2,7 +2,7 @@ import { Context, Next } from "koa";
 import { LoginRequest, RegisterRequest, UserTable } from "../types";
 import { database } from "../config/database";
 import { compareHash, createHash } from "../config/hash";
-import { createToken } from "../config/jwt";
+import { createToken, verifyToken } from "../config/jwt";
 
 /**
  * Register a new user
@@ -63,6 +63,44 @@ export const login = async (ctx: Context) => {
     }
 }
 
-export const authorize = (ctx: Context, next: Next) => {
+/**
+ * Get the currently authenticated user
+ * @param ctx Koa.context
+ */
+export const me = (ctx: Context) => {
+    const bearerToken = ctx.request.header['authorization']?.split(' ')[1]
+   
+    if (bearerToken) {
+        const user = verifyToken(bearerToken)
+        ctx.body = {
+            user
+        }
+        return
+    }
+}
 
+/**
+ * Prevent unauthenticated route access
+ * @param ctx 
+ * @param next 
+ */
+export const authorize = async (ctx: Context, next: Next) => {
+    const bearerToken = ctx.request.header['authorization']?.split(' ')[1]
+    if (bearerToken) {
+        try {
+            verifyToken(bearerToken)
+            await next()
+        } catch (err) {
+            return sendUnauthorizedResponse();
+        }
+    }
+
+    return sendUnauthorizedResponse()
+
+    function sendUnauthorizedResponse() {
+        ctx.status = 403;
+        ctx.body = {
+            message: 'Unathorized'
+        };
+    }
 }
