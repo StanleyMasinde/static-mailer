@@ -4,10 +4,17 @@ import { validate } from "../actions/validate"
 
 const router = new koaRouter({ prefix: '/auth' })
 
-router.post('/register', register)
+router.post('/register',
+    validate({
+        name: 'required',
+        email: 'required|email',
+        password: 'required',
+    }),
+    register)
+
 router.post('/login',
     validate({
-        email: 'required',
+        email: 'required|email',
         password: 'required'
     }),
     login)

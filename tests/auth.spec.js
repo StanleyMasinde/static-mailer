@@ -27,6 +27,24 @@ describe('Authentication tests', () => {
         expect(response.body.user).toHaveProperty('id', 'name', 'email')
     })
 
+    test('User registration without body fails', async () => {
+        const response = await application
+            .post('/auth/register')
+
+        expect(response.status).toBe(400)
+        expect(response.body.message).toBe('Bad request')
+    })
+
+    test('User registration validation', async () => {
+        const response = await application
+            .post('/auth/register')
+            .send({
+                email: 'foo',
+            })
+
+        expect(response.status).toBe(422)
+    })
+
     test('User can login', async () => {
         const response = await application
             .post('/auth/login')
@@ -36,5 +54,25 @@ describe('Authentication tests', () => {
             })
             expect(response.status).toBe(200)
             expect(response.body).toHaveProperty('token')
+    })
+
+    test('User login without request body fails', async () => {
+        const response = await application
+            .post('/auth/login')
+
+            expect(response.status).toBe(400)
+            expect(response.body.message).toBe('Bad request')
+    })
+
+    test('User login with wrong credentials fails', async () => {
+        const response = await application
+            .post('/auth/login')
+            .send({
+                email: 'foo@bar.com',
+                password: 'wrong password'
+            })
+
+            expect(response.status).toBe(401)
+            expect(response.body.message).toBe('These credentials don\'t match our records')
     })
 })

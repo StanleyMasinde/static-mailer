@@ -10,13 +10,6 @@ import { createToken } from "../config/jwt";
  */
 export const register = async (ctx: Context) => {
     const requestBody = ctx.request.body as RegisterRequest
-    if (!requestBody) {
-        ctx.status = 400
-        ctx.body = {
-            message: 'Bad request'
-        }
-        return
-    }
     const password = await createHash(requestBody.password)
 
     const [userId] = await database<UserTable>('users')
@@ -64,7 +57,7 @@ export const login = async (ctx: Context) => {
     function sendFailedAuthResponse() {
         ctx.status = 401;
         ctx.body = {
-            message: 'These credentials do match our records'
+            message: 'These credentials don\'t match our records'
         };
         return
     }
