@@ -4,6 +4,12 @@ const app = require('../dist/app')
 const { faker } = require('@faker-js/faker')
 const application = request(app.default.callback())
 
+const user = {
+    name: faker.name.fullName(),
+    email: faker.internet.email(),
+    password: faker.internet.password()
+}
+
 describe('Authentication tests', () => {
     test('Throw a 400 when the request body is missing', async () => {
         const response = await application
@@ -14,14 +20,21 @@ describe('Authentication tests', () => {
     test('User registration', async () => {
         const response = await application
             .post('/auth/register')
-            .send({
-                name: faker.name.fullName(),
-                email: faker.internet.email(),
-                password: faker.internet.password()
-            })
+            .send(user)
 
         expect(response.status).toBe(200)
         expect(response.body).toHaveProperty('token')
         expect(response.body.user).toHaveProperty('id', 'name', 'email')
+    })
+
+    test('User can login', async () => {
+        const response = await application
+            .post('/auth/login')
+            .send({
+                email: user.email,
+                password: user.password
+            })
+            expect(response.status).toBe(200)
+            expect(response.body).toHaveProperty('token')
     })
 })
