@@ -8,17 +8,17 @@ jobs:
   build:
     runs-on: ubuntu-latest
     environment:
-        name: Test
+        name: Testing
     steps:
     - uses: actions/checkout@v3
-    - name: Use Node.js 18.x
+    - name: Use Node.js
       uses: actions/setup-node@v3
       with:
         node-version: 18.x
         cache: 'npm'
     - name: Start Mailpit
       uses: StanleyMasinde/mailpit-action@v0.1.0
-    - name: Setup database
+    - name: Setup MySQL database
       run: | 
           sudo systemctl start mysql.service
           mysql -u root -proot  -e "create database staticsend"
