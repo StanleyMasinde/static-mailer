@@ -1,8 +1,13 @@
 {
-  "name": "static-send",
+  "name": "static-mailer",
   "version": "0.1.0",
   "description": "Send emails from static websites",
   "main": "dist/app.js",
+  "directories": {
+    "test": "tests"
+  },
+  "repository": "git@github.com:StanleyMasinde/static-send.git",
+  "private": true,
   "scripts": {
     "start": "node dist/server.js",
     "pretest": "tsc && knex migrate:latest",
