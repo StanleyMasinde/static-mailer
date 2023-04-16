@@ -1,30 +1,32 @@
 name: Build and test
 on:
   push:
-    branches: [ "main" ]
+    branches: ["main"]
   pull_request:
-    branches: [ "main" ]
+    branches: ["main"]
 jobs:
   build:
     runs-on: ubuntu-latest
     environment:
-        name: Testing
+      name: Testing
     steps:
-    - uses: actions/checkout@v3
-    - name: Use Node.js
-      uses: actions/setup-node@v3
-      with:
-        node-version: 18.x
-        cache: 'npm'
-    - name: Start Mailpit
-      uses: StanleyMasinde/mailpit-action@v0.1.0
-    - name: Setup MySQL database
-      run: | 
+      - uses: actions/checkout@v3
+      - name: Use Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: 18.x
+          cache: "npm"
+      - name: Start Mailpit
+        uses: StanleyMasinde/mailpit-action@v0.1.0
+      - name: Setup MySQL database
+        run: |
           sudo systemctl start mysql.service
           mysql -u root -proot  -e "create database staticsend"
-    - name: Setup environment variables
-      run: cp .env.example .env
-    - name: Install deps 
-      run: npm ci
-    - name: Test 🧪
-      run: npm test
+      - name: Setup environment variables
+        run: cp .env.example .env
+      - name: Install deps
+        run: npm ci
+      - name: Test 🧪
+        run: npm test
+      - name: Jest coverage report
+        uses: ArtiomTr/jest-coverage-report-action@v2.2.2
