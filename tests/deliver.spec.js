@@ -14,11 +14,10 @@ describe('Email delivery test', () => {
         const response = await request(application)
         .post('/auth/register')
         .send(user)
-    const token = response.body.token
-    console.log('token', token)
+
     const createApiKey = await request(application)
         .post('/user/apiKeys')
-        .set('authorization', `Bearer ${token}`)
+        .set('authorization', `Bearer ${response.body.token}`)
         .send({
             name: faker.lorem.words(),
         })
