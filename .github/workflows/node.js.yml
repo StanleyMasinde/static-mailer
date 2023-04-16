@@ -7,14 +7,16 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
+    environment:
+        name: Test
     steps:
     - uses: actions/checkout@v3
     - name: Use Node.js 18.x
       uses: actions/setup-node@v3
       with:
-        node-version: 19.x
+        node-version: 18.x
         cache: 'npm'
-    - name: Start mailpit
+    - name: Start Mailpit
       uses: StanleyMasinde/mailpit-action@v0.1.0
     - name: Setup database
       run: | 
@@ -22,9 +24,7 @@ jobs:
           mysql -u root -proot  -e "create database staticsend"
     - name: Setup environment variables
       run: cp .env.example .env
-    - name: Install deps
+    - name: Install deps 
       run: npm ci
-    - name: Build and test
-      run: |
-         npm run build --if-present
-         npm test
+    - name: Test 🧪
+      run: npm test
