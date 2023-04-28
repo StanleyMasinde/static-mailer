@@ -3,6 +3,7 @@ import { LoginRequest, RegisterRequest, UserTable } from "../types";
 import { database } from "../config/database";
 import { compareHash, createHash } from "../config/hash";
 import { createToken, verifyToken } from "../config/jwt";
+import { sendMail } from "../config/mailer";
 
 /**
  * Register a new user
@@ -25,6 +26,14 @@ export const register = async (ctx: Context) => {
             user,
             token
         }
+        sendMail({
+            subject: "Welcome to Static Mailer",
+            receipient: user.email,
+            template: "welcome",
+            data: {
+                user
+            }
+        })
         return
     }
 
