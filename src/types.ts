@@ -43,3 +43,10 @@ export interface ValidationRuleFactory {
     function: (value: string | number) => boolean,
     message: string
 }
+
+export interface EmailOptions {
+    subject: string,
+    receipient: string,
+    template: string,
+    data: {[key: string]: any}
+}

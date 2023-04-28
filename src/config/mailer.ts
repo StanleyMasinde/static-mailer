@@ -1,6 +1,7 @@
 import { readFileSync } from 'fs'
 import nodemailer from 'nodemailer'
 import { renderFile } from 'pug'
+import { EmailOptions } from '../types'
 
 
 let mailerPort: number
@@ -35,7 +36,7 @@ const transport = nodemailer.createTransport({
  * @param template 
  * @returns 
  */
-export const mailer = async (recipientEmail: string, subject: string, senderEmail: string, message: string, template: string = 'deliver') => {
+export const fowardEmail = async (recipientEmail: string, subject: string, senderEmail: string, message: string, template: string = 'deliver') => {
     const timestamp =  new Date().toUTCString()
     const text = readFileSync(`./templates/${template}.txt`)
     .toString()
@@ -60,4 +61,30 @@ export const mailer = async (recipientEmail: string, subject: string, senderEmai
     })
 
     return true
+}
+
+/**
+ * Send out an email
+ * @param mailOptions 
+ */
+export const sendMail = async (mailOptions: EmailOptions) => {
+    const text = readFileSync(`./templates/${mailOptions.template}.txt`)
+    try {
+        await transport.sendMail({
+            subject: mailOptions.subject,
+            text,
+            html: renderFile(`./templates/${mailOptions.template}.pug`, { 
+                pretty: true,
+                data: mailOptions.data,
+                appUrl: process.env.APP_URL || 'https://staticmailer.test'
+            }),
+            to: mailOptions.receipient,
+            from: {
+                name: 'Static Mailer',
+                address: 'no-reply@staticmailer.com'
+            }
+        })
+    } catch (error) {
+        
+    }
 }

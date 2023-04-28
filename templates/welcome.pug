@@ -373,14 +373,14 @@ head
       font-family: Arial, sans-serif;
       }
 span.preheader
-  | Thanks for trying out [Static Mailer]. We&rsquo;ve pulled together some information and resources to help you get started.
+  | Thanks for trying out [Static Mailer]. We've pulled together some information and resources to help you get started.
 table.email-wrapper(width='100%' cellpadding='0' cellspacing='0' role='presentation')
   tr
     td(align='center')
       table.email-content(width='100%' cellpadding='0' cellspacing='0' role='presentation')
         tr
           td.email-masthead
-            a.f-fallback.email-masthead_name(href='https://example.com')
+            a.f-fallback.email-masthead_name(href=appUrl)
               | [Static Mailer]
         // Email Body
         tr
@@ -390,49 +390,29 @@ table.email-wrapper(width='100%' cellpadding='0' cellspacing='0' role='presentat
               tr
                 td.content-cell
                   .f-fallback
-                    h1 Welcome, {{name}}!
+                    h1 Welcome, #{data.user.name}!
                     p
-                      | Thanks for trying [Static Mailer]. We&rsquo;re thrilled to have you on board. To get the most out of [Static Mailer], do this primary next step:
+                      | Thanks for trying [Static Mailer]. We're thrilled to have you on board. To get the most out of [Static Mailer], do this primary next step:
                     // Action
                     table.body-action(align='center' width='100%' cellpadding='0' cellspacing='0' role='presentation')
                       tr
                         td(align='center')
-                          //
-                            Border based button
-                            https://litmus.com/blog/a-guide-to-bulletproof-buttons-in-email-design
                           table(width='100%' border='0' cellspacing='0' cellpadding='0' role='presentation')
                             tr
                               td(align='center')
-                                a.f-fallback.button(href='{{action_url}}' target='_blank') Do this Next
-                    table.attributes(width='100%' cellpadding='0' cellspacing='0' role='presentation')
-                      tr
-                        td.attributes_content
-                          table(width='100%' cellpadding='0' cellspacing='0' role='presentation')
-                            tr
-                              td.attributes_item
-                                span.f-fallback
-                                  strong Trial Start Date:
-                                  |  {{trial_start_date}}
-                            tr
-                              td.attributes_item
-                                span.f-fallback
-                                  strong Trial End Date:
-                                  |  {{trial_end_date}}
-                      | Thanks,
-                      br
-                      | [Sender Name] and the [Static Mailer] team
-                    p
-                      strong P.S.
-                      |  Need immediate help getting started? Check out our 
-                      a(href='{{help_url}}') help documentation
-                      | . Or, just reply to this email, the [Static Mailer] support team is always ready to help!
-                    // Sub copy
+                                a.f-fallback.button(href=`${appUrl}/dashboard` target='_blank') My Dashboard
+                      tr 
+                        td(align="start")
+                          p
+                            | Thanks,
+                            br
+                            | [Static Mailer] team
                     table.body-sub(role='presentation')
                       tr
                         td
                           p.f-fallback.sub
-                            | If you&rsquo;re having trouble with the button above, copy and paste the URL below into your web browser.
-                          p.f-fallback.sub {{action_url}}
+                            | If you're having trouble with the button above, copy and paste the URL below into your web browser.
+                          p.f-fallback.sub #{appUrl}/dashboard
         tr
           td
             table.email-footer(align='center' width='570' cellpadding='0' cellspacing='0' role='presentation')
