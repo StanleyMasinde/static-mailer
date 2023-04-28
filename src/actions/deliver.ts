@@ -1,6 +1,6 @@
 import { Context } from "koa";
 import { ApiKeyTable, EmailRequest, UserTable } from "../types";
-import { mailer } from "../config/mailer";
+import { fowardEmail } from "../config/mailer";
 import { database } from "../config/database";
 
 /**
@@ -15,7 +15,7 @@ export const deliverEmail = async (ctx: Context) => {
     .first('email')
     if (keyInDB) {
         sendSuccessResponse();
-        return await mailer(keyInDB.email , body.subject, body.email, body.message)
+        return await fowardEmail(keyInDB.email , body.subject, body.email, body.message)
     }
     return sendNotFoundResponse();
 

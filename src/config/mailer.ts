@@ -35,7 +35,7 @@ const transport = nodemailer.createTransport({
  * @param template 
  * @returns 
  */
-export const mailer = async (recipientEmail: string, subject: string, senderEmail: string, message: string, template: string = 'deliver') => {
+export const fowardEmail = async (recipientEmail: string, subject: string, senderEmail: string, message: string, template: string = 'deliver') => {
     const timestamp =  new Date().toUTCString()
     const text = readFileSync(`./templates/${template}.txt`)
     .toString()
