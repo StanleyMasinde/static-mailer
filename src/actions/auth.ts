@@ -65,8 +65,15 @@ export const login = async (ctx: Context) => {
 
     function sendFailedAuthResponse() {
         ctx.status = 401;
+        ctx.header["content-type"] = 'application/vnd.api+json'
         ctx.body = {
-            message: 'These credentials don\'t match our records'
+            errors: [
+                {
+                    status: "401",
+                    title: "Authentication error.",
+                    detail: "These credentials do not match our records."
+                }
+            ]
         };
         return
     }
