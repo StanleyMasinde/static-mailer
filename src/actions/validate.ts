@@ -56,7 +56,13 @@ export const validate = (param: { [key: string]: string }) => {
             ctx.header['content-type'] = 'application/vnd.api+json'
             ctx.status = 400
             ctx.body = {
-                message: 'Bad request'
+                errors: [
+                    {
+                        status: "400",
+                        title: "Bad request.",
+                        detail: "Request body missing."
+                    }
+                ]
             }
             return
         }
