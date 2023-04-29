@@ -37,7 +37,6 @@ export const getUserApiKeys = async (ctx: Context) => {
 
     const data = apiKeys.map((apiKey) => {
         const attributes = apiKey
-        delete attributes.uuid
         delete attributes.user_id
         return {
             type: "apiKeys",
@@ -51,4 +50,55 @@ export const getUserApiKeys = async (ctx: Context) => {
         data
     }
     return
+}
+
+/**
+ * Delete a given API
+ * @param ctx 
+ */
+export const deleteApiKey = async (ctx: Context) => {
+    try {
+        const apiKeyParam = ctx.params.uuid
+        const apiKey = await database<ApiKeyTable>('api_keys').where('uuid', apiKeyParam).first()
+
+        if (!apiKey) {
+            return sendNotFoundResponse(apiKeyParam);
+        }
+
+        if (apiKey.user_id == ctx.state.user.id) {
+            await database<ApiKeyTable>('api_keys').where('uuid', apiKeyParam).delete()
+            ctx.body = {
+                data: "Key deleted."
+            }
+            return
+        }
+    } catch (error) {
+        ctx.header['content-type'] = 'application/vnd.api+json';
+        ctx.status = 500
+        ctx.body = {
+            errors: [
+                {
+                    status: 500,
+                    title: "Server error.",
+                    detail: "A server error occoured. Try again later."
+                }
+            ]
+        }
+    }
+
+    function sendNotFoundResponse(apiKeyParam: any) {
+        ctx.status = 404;
+        ctx.header['content-type'] = 'application/vnd.api+json';
+
+        ctx.body = {
+            errors: [
+                {
+                    source: { parameter: "uuid" },
+                    title: "Not found error.",
+                    detail: `API key with id ${apiKeyParam} was not found.`
+                }
+            ]
+        };
+        return
+    }
 }
