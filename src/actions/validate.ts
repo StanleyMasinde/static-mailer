@@ -29,52 +29,50 @@ function array(value: string | number): boolean {
 const ruleFactories: { [key: string]: ValidationRuleFactory } = {
     'required': {
         function: required,
-        message: 'The {field} is required'
+        title: 'Field required',
+        detail: 'The {field} is required'
     },
     'email': {
         function: email,
-        message: 'This field should be a valid email'
+        title: 'Invalid E-mail',
+        detail: 'This field should be a valid email'
     },
     'phone': {
         function: phone,
-        message: 'The {field} fieled should be a valid phone number'
+        title: 'Invalid phone',
+        detail: 'The {field} fieled should be a valid phone number'
     },
     'array': {
         function: array,
-        message: 'The {field} field should be an array'
+        title: 'Invalid array',
+        detail: 'The {field} field should be an array'
     }
 }
 export const validate = (param: { [key: string]: string }) => {
     return async (ctx: Context, next: Next) => {
         const errors: Array<ValidationMessage> = []
         const body = ctx.request.body
-        if(!body) {
+        if (!body) {
+            ctx.header['content-type'] = 'application/vnd.api+json'
             ctx.status = 400
             ctx.body = {
                 message: 'Bad request'
             }
             return
         }
-        
+
         for (const key in param) {
             const rules: Array<string> = param[key].split('|')
             rules.forEach((rule: string) => {
                 const factory: ValidationRuleFactory = ruleFactories[rule]
                 if (!factory) {
-                    ctx.throw(new Error(`Rule ${rule} not found`))
+                    return ctx.throw(new Error(`Rule ${rule} not found`))
                 }
                 if (!factory.function(body[key])) {
-                    const errExists: ValidationMessage = errors.filter((e: ValidationMessage) => {
-                        return e.field == key
-                    })[0]
-
-                    if (errExists) {
-                        return errExists.messages.push(factory.message.replace('{field}', key))
-                    }
-
                     return errors.push({
-                        field: key,
-                        messages: [factory.message.replace('{field}', key)]
+                        source: `/data/attributes/${key}`,
+                        title: factory.title,
+                        message: factory.detail.replace('{field}', key)
                     })
                 }
             })
@@ -82,8 +80,8 @@ export const validate = (param: { [key: string]: string }) => {
 
         if (errors.length > 0) {
             ctx.status = 422
+            ctx.header['content-type'] = 'application/vnd.api+json'
             ctx.body = {
-                message: 'Validation errors',
                 errors
             }
             return
