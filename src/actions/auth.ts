@@ -131,8 +131,16 @@ export const authorize = async (ctx: Context, next: Next) => {
 
     function sendUnauthorizedResponse() {
         ctx.status = 403;
+        ctx.header["content-type"] = 'application/vnd.api+json'
         ctx.body = {
-            message: 'Unathorized'
+            errors: [
+                {
+                    status: "403",
+                    title: "Authorization error.",
+                    detail: "You are not allowed to access this resource."
+                }
+            ]
         };
+        return
     }
 }
