@@ -34,9 +34,21 @@ export const getUserApiKeys = async (ctx: Context) => {
     const apiKeys = await database<ApiKeyTable>('api_keys')
         .where('user_id', user.id)
         .select('*')
-    
-        ctx.body = {
-            apiKeys
+
+    const data = apiKeys.map((apiKey) => {
+        const attributes = apiKey
+        delete attributes.uuid
+        delete attributes.user_id
+        return {
+            type: "apiKeys",
+            uuid: apiKey.uuid,
+            attributes
         }
-        return
+    })
+
+    ctx.header['content-type'] = 'application/vnd.api+json'
+    ctx.body = {
+        data
+    }
+    return
 }

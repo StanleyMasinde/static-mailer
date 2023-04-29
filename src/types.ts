@@ -25,8 +25,8 @@ export interface UserTable {
 }
 
 export interface ApiKeyTable {
-    uuid: string,
-    user_id: number,
+    uuid?: string,
+    user_id?: number,
     name: string,
     key: string
     created_at: Date,
