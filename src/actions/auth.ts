@@ -13,6 +13,21 @@ export const register = async (ctx: Context) => {
     const requestBody = ctx.request.body as RegisterRequest
     const password = await createHash(requestBody.password)
 
+    const userExists = await database<UserTable>('users').where('email', requestBody.email).first()
+    if (userExists) {
+        ctx.status = 422;
+        ctx.header["content-type"] = 'application/vnd.api+json'
+        ctx.body = {
+            errors: [
+                {
+                    source: '/data/attributes/email',
+                    title: 'Invalid E-mail',
+                    message: 'This email is already registered'
+                }
+            ]
+        }
+        return
+    }
     const [userId] = await database<UserTable>('users')
         .insert({
             'name': requestBody.name,
@@ -85,7 +100,7 @@ export const login = async (ctx: Context) => {
  */
 export const me = (ctx: Context) => {
     const bearerToken = ctx.request.header['authorization']?.split(' ')[1]
-   
+
     if (bearerToken) {
         const user = verifyToken(bearerToken)
         ctx.body = {
