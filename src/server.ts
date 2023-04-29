@@ -11,7 +11,8 @@ if (process.env.APP_PORT) {
 
 const server = createSecureServer({
     cert: readFileSync('./keys/localhost-cert.pem'),
-    key: readFileSync('./keys/localhost-privkey.pem')
+    key: readFileSync('./keys/localhost-privkey.pem'),
+    allowHTTP1: true
 }, app.callback())
 
 server
