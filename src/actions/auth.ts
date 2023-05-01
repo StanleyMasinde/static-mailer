@@ -4,6 +4,7 @@ import { database } from "../config/database";
 import { compareHash, createHash } from "../config/hash";
 import { createToken, verifyToken } from "../config/jwt";
 import { sendMail } from "../config/mailer";
+import { JwtPayload } from "jsonwebtoken";
 
 /**
  * Register a new user
@@ -13,6 +14,21 @@ export const register = async (ctx: Context) => {
     const requestBody = ctx.request.body as RegisterRequest
     const password = await createHash(requestBody.password)
 
+    const userExists = await database<UserTable>('users').where('email', requestBody.email).first()
+    if (userExists) {
+        ctx.status = 422;
+        ctx.header["content-type"] = 'application/vnd.api+json'
+        ctx.body = {
+            errors: [
+                {
+                    source: '/data/attributes/email',
+                    title: 'Invalid E-mail',
+                    message: 'This email is already registered'
+                }
+            ]
+        }
+        return
+    }
     const [userId] = await database<UserTable>('users')
         .insert({
             'name': requestBody.name,
@@ -21,7 +37,14 @@ export const register = async (ctx: Context) => {
         })
     const user = await database<UserTable>('users').where('id', userId).first('id', 'name', 'email')
     if (user) {
-        const token = createToken(user)
+        const Payload: JwtPayload = {
+            sub: `${user.id}`,
+            attributes: {
+                name: user.name,
+                email: user.email
+            }
+        }
+        const token = createToken(Payload)
         ctx.body = {
             user,
             token
@@ -52,7 +75,14 @@ export const login = async (ctx: Context) => {
         const passwordMatches = await compareHash(requestBody.password, user.password)
         // The password matches so we generate a JWT
         if (passwordMatches) {
-            const token = createToken({ id: user.id, name: user.name, email: user.email })
+            const Payload: JwtPayload = {
+                sub: `${user.id}`,
+                attributes: {
+                    name: user.name,
+                    email: user.email
+                }
+            }
+            const token = createToken(Payload)
             ctx.body = {
                 token
             }
@@ -65,8 +95,15 @@ export const login = async (ctx: Context) => {
 
     function sendFailedAuthResponse() {
         ctx.status = 401;
+        ctx.header["content-type"] = 'application/vnd.api+json'
         ctx.body = {
-            message: 'These credentials don\'t match our records'
+            errors: [
+                {
+                    status: "401",
+                    title: "Authentication error.",
+                    detail: "These credentials do not match our records."
+                }
+            ]
         };
         return
     }
@@ -78,7 +115,7 @@ export const login = async (ctx: Context) => {
  */
 export const me = (ctx: Context) => {
     const bearerToken = ctx.request.header['authorization']?.split(' ')[1]
-   
+
     if (bearerToken) {
         const user = verifyToken(bearerToken)
         ctx.body = {
@@ -109,8 +146,16 @@ export const authorize = async (ctx: Context, next: Next) => {
 
     function sendUnauthorizedResponse() {
         ctx.status = 403;
+        ctx.header["content-type"] = 'application/vnd.api+json'
         ctx.body = {
-            message: 'Unathorized'
+            errors: [
+                {
+                    status: "403",
+                    title: "Authorization error.",
+                    detail: "You are not allowed to access this resource."
+                }
+            ]
         };
+        return
     }
 }

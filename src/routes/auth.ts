@@ -2,7 +2,7 @@ import koaRouter from "@koa/router"
 import { authorize, login, me, register } from "../actions/auth"
 import { validate } from "../actions/validate"
 
-const router = new koaRouter({ prefix: '/auth' })
+const router = new koaRouter({ prefix: '/v1' })
 
 router.post('/register',
     validate({

@@ -25,8 +25,8 @@ export interface UserTable {
 }
 
 export interface ApiKeyTable {
-    uuid: string,
-    user_id: number,
+    uuid?: string,
+    user_id?: number,
     name: string,
     key: string
     created_at: Date,
@@ -35,18 +35,20 @@ export interface ApiKeyTable {
 }
 
 export interface ValidationMessage {
-    'field': string,
-    'messages': Array<string>
+    source: string,
+    title: string
+    message: string
 }
 
 export interface ValidationRuleFactory {
     function: (value: string | number) => boolean,
-    message: string
+    title: string,
+    detail: string
 }
 
 export interface EmailOptions {
     subject: string,
     receipient: string,
     template: string,
-    data: {[key: string]: any}
+    data: { [key: string]: any }
 }
