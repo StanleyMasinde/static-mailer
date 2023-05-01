@@ -14,14 +14,14 @@ const user = {
 describe('Email delivery test', () => {
     test('Deliver an email', async () => {
         const registerUserRequest = await requester
-            .post('/auth/register')
+            .post('/v1/register')
             .send(user)
         expect(registerUserRequest.status).toBe(200)
         expect(registerUserRequest.body).toHaveProperty('token')
         expect(registerUserRequest.body.user).toHaveProperty('id', 'name', 'email')
 
         const createApiKeyRequest = await requester
-            .post('/user/apiKeys')
+            .post('/v1/apiKeys')
             .set('authorization', `Bearer ${registerUserRequest.body.token}`)
             .send({
                 name: faker.lorem.words(),
