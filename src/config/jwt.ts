@@ -7,9 +7,9 @@ const secret: string = process.env.JWT_SECRET || 'secret'
  * @param payload 
  * @returns 
  */
-export const createToken = (payload: { [key: string]: string |number }): string => {
+export const createToken = (payload: JwtPayload): string => {
     return sign(payload, secret, {
-        expiresIn: '2 days'
+        expiresIn: '2 days',
     })
 }
 

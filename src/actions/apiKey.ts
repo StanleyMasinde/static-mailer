@@ -3,6 +3,7 @@ import { v4 } from 'uuid'
 import { Context } from "koa";
 import { database } from "../config/database";
 import { ApiKeyTable, UserTable } from "../types";
+import { JwtPayload } from 'jsonwebtoken';
 
 /**
  * Create API key
@@ -15,7 +16,7 @@ export const createApiKey = async (ctx: Context) => {
         uuid,
         name: body.name,
         key: randomBytes(16).toString('base64url'),
-        user_id: ctx.state.user.id
+        user_id: ctx.state.user.sub
     })
 
     const apiKey = await database<ApiKeyTable>('api_keys').where('uuid', uuid).first()
@@ -30,9 +31,9 @@ export const createApiKey = async (ctx: Context) => {
  * @returns 
  */
 export const getUserApiKeys = async (ctx: Context) => {
-    const user = ctx.state.user as UserTable
+    const user: JwtPayload = ctx.state.user
     const apiKeys = await database<ApiKeyTable>('api_keys')
-        .where('user_id', user.id)
+        .where('user_id', user.sub)
         .select('*')
 
     const data = apiKeys.map((apiKey) => {
@@ -65,7 +66,7 @@ export const deleteApiKey = async (ctx: Context) => {
             return sendNotFoundResponse(apiKeyParam);
         }
 
-        if (apiKey.user_id == ctx.state.user.id) {
+        if (apiKey.user_id == ctx.state.user.sub) {
             await database<ApiKeyTable>('api_keys').where('uuid', apiKeyParam).delete()
             ctx.body = {
                 data: "Key deleted."

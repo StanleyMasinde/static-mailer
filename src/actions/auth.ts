@@ -4,6 +4,7 @@ import { database } from "../config/database";
 import { compareHash, createHash } from "../config/hash";
 import { createToken, verifyToken } from "../config/jwt";
 import { sendMail } from "../config/mailer";
+import { JwtPayload } from "jsonwebtoken";
 
 /**
  * Register a new user
@@ -36,7 +37,14 @@ export const register = async (ctx: Context) => {
         })
     const user = await database<UserTable>('users').where('id', userId).first('id', 'name', 'email')
     if (user) {
-        const token = createToken(user)
+        const Payload: JwtPayload = {
+            sub: `${user.id}`,
+            attributes: {
+                name: user.name,
+                email: user.email
+            }
+        }
+        const token = createToken(Payload)
         ctx.body = {
             user,
             token
@@ -67,7 +75,14 @@ export const login = async (ctx: Context) => {
         const passwordMatches = await compareHash(requestBody.password, user.password)
         // The password matches so we generate a JWT
         if (passwordMatches) {
-            const token = createToken({ id: user.id, name: user.name, email: user.email })
+            const Payload: JwtPayload = {
+                sub: `${user.id}`,
+                attributes: {
+                    name: user.name,
+                    email: user.email
+                }
+            }
+            const token = createToken(Payload)
             ctx.body = {
                 token
             }
