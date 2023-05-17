@@ -2,6 +2,7 @@ require('dotenv').config()
 const request = require('supertest')
 const app = require('../dist/app')
 const { faker } = require('@faker-js/faker')
+const { sign } = require('jsonwebtoken')
 const application = request(app.default.callback())
 
 const user = {
@@ -77,6 +78,36 @@ describe('Authentication tests', () => {
             })
         expect(response.status).toBe(401)
         // expect(response.body.errors).toBe(Array)
+    })
+
+
+    test('Handle Google reg', async () => {
+        const response = await application
+        .post('/v1/social-auth/google')
+        .send({
+            token: sign({
+                sub: faker.random.numeric(),
+                email: faker.internet.email(),
+                name: faker.name.fullName()
+            }, 'secret')
+        })
+
+        expect(response.body).toHaveProperty('token')
+    })
+
+
+    test('Handle Google login', async () => {
+        const response = await application
+        .post('/v1/social-auth/google')
+        .send({
+            token: sign({
+                sub: faker.random.numeric(),
+                email: user.email,
+                name: user.password
+            }, 'secret')
+        })
+
+        expect(response.body).toHaveProperty('token')
     })
 
     // test('Get the current user', async () => { // TODO This is pointless in the functionality is is here to test authorisation

@@ -52,3 +52,15 @@ export interface EmailOptions {
     template: string,
     data: { [key: string]: any }
 }
+
+export interface GoogleJWTPayload {
+    email: string,
+    email_verified: boolean,
+    azp: string,
+    name: string
+    picture?: string,
+    given_name: string,
+    family_name: string,
+    iat: number
+    exp: number
+}

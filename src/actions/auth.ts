@@ -1,10 +1,10 @@
 import { Context, Next } from "koa";
-import { LoginRequest, RegisterRequest, UserTable } from "../types";
+import { GoogleJWTPayload, LoginRequest, RegisterRequest, UserTable } from "../types";
 import { database } from "../config/database";
 import { compareHash, createHash } from "../config/hash";
 import { createToken, verifyToken } from "../config/jwt";
 import { sendMail } from "../config/mailer";
-import { JwtPayload } from "jsonwebtoken";
+import { JwtPayload, decode } from "jsonwebtoken";
 
 /**
  * Register a new user
@@ -157,5 +157,103 @@ export const authorize = async (ctx: Context, next: Next) => {
             ]
         };
         return
+    }
+}
+
+/**
+ * Handle social auth
+ */
+export const socialAuth = async (ctx: Context) => {
+    const provider = ctx.params.provider
+
+    switch (provider) {
+        case 'google':
+            await handleGoogleAuth()
+            break;
+        default:
+            invalidProvidererror()
+            break;
+    }
+
+    async function handleGoogleAuth() {
+        const token = ctx.request.body.token
+        if (!token) {
+            return missingTokenError()
+        }
+
+        const userInfo = decode(token) as GoogleJWTPayload
+        const email = userInfo.email
+        const userInDb = await database<UserTable>('users').where('email', email).first()
+      
+        if (userInDb) {
+            const Payload: JwtPayload = {
+                sub: `${userInDb.id}`,
+                attributes: {
+                    name: userInDb.name,
+                    email: userInDb.email
+                }
+            }
+
+            const token = createToken(Payload)
+            ctx.body = {
+                token
+            }
+            return
+        }
+
+        const [userId] = await database<UserTable>('users').insert({
+            name: userInfo.name,
+            email: userInfo.email,
+            password: '',
+        })
+
+        const Payload: JwtPayload = {
+            sub: `${userId}`,
+            attributes: {
+                name: userInfo.name,
+                email: userInfo.email
+            }
+        }
+        const token2 = createToken(Payload) 
+        ctx.body = {
+            token: token2
+        }
+        sendMail({
+            subject: "Welcome to Static Mailer",
+            receipient: userInfo.email,
+            template: "welcome",
+            data: {
+                userInfo
+            }
+        })
+
+        return
+    }
+
+    function missingTokenError() {
+        ctx.status = 400
+        ctx.body = {
+            errors: [
+                {
+                    status: 400,
+                    title: "Missing token",
+                    detail: "Token missing from request body."
+                }
+            ]
+        };
+        return
+    }
+
+    function invalidProvidererror() {
+        ctx.status = 400
+        return ctx.body = {
+            errors: [
+                {
+                    status: 400,
+                    title: 'Invalid provider',
+                    detail: 'The provider is not supported. The supported provider is Google'
+                }
+            ]
+        };
     }
 }
