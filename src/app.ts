@@ -1,7 +1,7 @@
 import * as dotEnv from 'dotenv'
 dotEnv.config()
 
-import Koa from 'koa'
+import Koa, { Context } from 'koa'
 import { koaBody } from 'koa-body'
 import { indexRoutes, allowedIndexMethods } from './routes'
 import { publicApiRoutes, allowedPublicApiMethods } from './routes/publicapi'
@@ -22,6 +22,18 @@ app.use(indexRoutes())
     .use(allowedAuthMethods())
     .use(userRoutes())
     .use(allowedUserMethods())
-
+    .use((ctx) => {
+        ctx.status = 404;
+        ctx.body = {
+            errors: [
+                {
+                    status: 404,
+                    code: 'not-found',
+                    title: 'Not Found',
+                    detail: 'The requested resource could not be found.'
+                }
+            ]
+        };
+    })
 
 export default app
