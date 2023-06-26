@@ -176,7 +176,8 @@ export const socialAuth = async (ctx: Context) => {
     }
 
     async function handleGoogleAuth() {
-        const token = ctx.request.body.token
+        const token = ctx.request.body
+        console.log(token);
         if (!token) {
             return missingTokenError()
         }

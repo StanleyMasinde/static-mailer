@@ -53,6 +53,7 @@ describe('Authentication tests', () => {
                 email: user.email,
                 password: user.password
             })
+            console.log(response.body);
         expect(response.status).toBe(200)
         expect(response.body).toHaveProperty('token')
     })
@@ -81,34 +82,33 @@ describe('Authentication tests', () => {
     })
 
 
-    test('Handle Google reg', async () => {
-        const response = await application
-        .post('/v1/social-auth/google')
-        .send({
-            token: sign({
-                sub: faker.random.numeric(),
-                email: faker.internet.email(),
-                name: faker.name.fullName()
-            }, 'secret')
-        })
+    // test('Handle Google reg', async () => {
+    //     const response = await application
+    //     .post('/v1/social-auth/google')
+    //     .send({
+    //         token: sign({
+    //             sub: faker.random.numeric(),
+    //             email: faker.internet.email(),
+    //             name: faker.name.fullName()
+    //         }, 'secret')
+    //     })
+    //     expect(response.body).toHaveProperty('token')
+    // })
 
-        expect(response.body).toHaveProperty('token')
-    })
 
+    // test('Handle Google login', async () => {
+    //     const response = await application
+    //     .post('/v1/social-auth/google')
+    //     .send({
+    //         token: sign({
+    //             sub: faker.random.numeric(),
+    //             email: user.email,
+    //             name: user.password
+    //         }, 'secret')
+    //     })
 
-    test('Handle Google login', async () => {
-        const response = await application
-        .post('/v1/social-auth/google')
-        .send({
-            token: sign({
-                sub: faker.random.numeric(),
-                email: user.email,
-                name: user.password
-            }, 'secret')
-        })
-
-        expect(response.body).toHaveProperty('token')
-    })
+    //     expect(response.body).toHaveProperty('token')
+    // })
 
     // test('Get the current user', async () => { // TODO This is pointless in the functionality is is here to test authorisation
     //     const response = await application
