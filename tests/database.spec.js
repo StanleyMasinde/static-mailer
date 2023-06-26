@@ -1,10 +1,12 @@
-require('dotenv').config()
-const { database } = require('../dist/config/database')
+require('dotenv').config();
+const { database } = require('../dist/config/database');
 
 describe('Database tests', () => {
-    test('Database connection', async () => {
-        const results = database('users').select().toSQL().sql
-        expect(results).toBe('select * from `users`')
-        await database.destroy()
-    })
-})
+  test('Database connection', async () => {
+    const query = database('users').select().toSQL();
+    expect(query.sql).toBe('select * from `users`');
+    expect(query.method).toBe('select');
+    expect(query.bindings).toEqual([]);
+    await database.destroy();
+  });
+});

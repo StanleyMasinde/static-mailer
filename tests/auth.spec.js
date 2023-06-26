@@ -6,127 +6,120 @@ const { database } = require('../dist/config/database')
 const application = request(app.default.callback())
 
 const user = {
-    name: faker.person.fullName(),
-    email: faker.internet.email(),
-    password: faker.internet.password()
-}
+  name: faker.person.fullName(),
+  email: faker.internet.email(),
+  password: faker.internet.password()
+};
 
 describe('Authentication tests', () => {
-    afterAll(async () => {
-        await database.destroy()
-    })
+  afterAll(async () => {
+    await database.destroy();
+  });
 
-    test('Throw a 400 when the request body is missing', async () => {
-        const response = await application
-            .post('/v1/register')
-        expect(response.status).toBe(400)
-    })
+  test('Throw a 400 when the request body is missing', async () => {
+    const response = await application.post('/v1/register');
+    expect(response.status).toBe(400);
+  });
 
-    test('User registration', async () => {
-        const response = await application
-            .post('/v1/register')
-            .send(user)
+  test('User registration succeeds with valid data', async () => {
+    const response = await application
+      .post('/v1/register')
+      .send(user);
 
-        expect(response.status).toBe(200)
-        expect(response.body).toHaveProperty('token')
-        expect(response.body.user).toHaveProperty('id', 'name', 'email')
-    })
+    expect(response.status).toBe(200);
+    expect(response.body).toHaveProperty('token');
+    expect(response.body.user).toHaveProperty('id', 'name', 'email');
+  });
 
-    test('User registration without body fails', async () => {
-        const response = await application
-            .post('/v1/register')
+  test('User registration fails without request body', async () => {
+    const response = await application.post('/v1/register');
+    expect(response.status).toBe(400);
+  });
 
-        expect(response.status).toBe(400)
-        // expect(response.body.message).toBe('Bad request')
-    })
+  test('User registration fails with invalid data', async () => {
+    const response = await application
+      .post('/v1/register')
+      .send({
+        email: 'foo'
+      });
 
-    test('User registration validation', async () => {
-        const response = await application
-            .post('/v1/register')
-            .send({
-                email: 'foo',
-            })
+    expect(response.status).toBe(422);
+  });
 
-        expect(response.status).toBe(422)
-    })
+  test('User can login with valid credentials', async () => {
+    const response = await application
+      .post('/v1/login')
+      .send({
+        email: user.email,
+        password: user.password
+      });
 
-    test('User can login', async () => {
-        const response = await application
-            .post('/v1/login')
-            .send({
-                email: user.email,
-                password: user.password
-            })
-        expect(response.status).toBe(200)
-        expect(response.body).toHaveProperty('token')
-    })
+    expect(response.status).toBe(200);
+    expect(response.body).toHaveProperty('token');
+  });
 
-    test('User login without request body fails', async () => {
-        const response = await application
-            .post('/v1/login')
+  test('User login fails without request body', async () => {
+    const response = await application.post('/v1/login');
+    expect(response.status).toBe(400);
+  });
 
-        expect(response.status).toBe(400)
-        // expect(response.body.errors[0]).toBe({
-        //     status: '400',
-        //     title: 'Bad request.',
-        //     detail: 'Request body missing.'
-        // })
-    })
+  test('User login fails with incorrect credentials', async () => {
+    const response = await application
+      .post('/v1/login')
+      .send({
+        email: 'foo@bar.com',
+        password: 'wrong password'
+      });
 
-    test('User login with wrong credentials fails', async () => {
-        const response = await application
-            .post('/v1/login')
-            .send({
-                email: 'foo@bar.com',
-                password: 'wrong password'
-            })
-        expect(response.status).toBe(401)
-        // expect(response.body.errors).toBe(Array)
-    })
+    expect(response.status).toBe(401);
+  });
 
+  // Uncomment and update the following tests based on your needs
+  /*
+  test('Handle Google registration', async () => {
+    const response = await application
+      .post('/v1/social-auth/google')
+      .send({
+        token: sign({
+          sub: faker.random.numeric(),
+          email: faker.internet.email(),
+          name: faker.name.fullName()
+        }, 'secret')
+      });
 
-    // test('Handle Google reg', async () => {
-    //     const response = await application
-    //     .post('/v1/social-auth/google')
-    //     .send({
-    //         token: sign({
-    //             sub: faker.random.numeric(),
-    //             email: faker.internet.email(),
-    //             name: faker.name.fullName()
-    //         }, 'secret')
-    //     })
-    //     expect(response.body).toHaveProperty('token')
-    // })
+    expect(response.body).toHaveProperty('token');
+  });
 
+  test('Handle Google login', async () => {
+    const response = await application
+      .post('/v1/social-auth/google')
+      .send({
+        token: sign({
+          sub: faker.random.numeric(),
+          email: user.email,
+          name: user.password
+        }, 'secret')
+      });
 
-    // test('Handle Google login', async () => {
-    //     const response = await application
-    //     .post('/v1/social-auth/google')
-    //     .send({
-    //         token: sign({
-    //             sub: faker.random.numeric(),
-    //             email: user.email,
-    //             name: user.password
-    //         }, 'secret')
-    //     })
+    expect(response.body).toHaveProperty('token');
+  });
 
-    //     expect(response.body).toHaveProperty('token')
-    // })
+  test('Get the current user', async () => {
+    const response = await application
+      .post('/v1/login')
+      .send({
+        email: user.email,
+        password: user.password
+      });
 
-    // test('Get the current user', async () => { // TODO This is pointless in the functionality is is here to test authorisation
-    //     const response = await application
-    //         .post('/v1/login')
-    //         .send({
-    //             email: user.email,
-    //             password: user.password
-    //         })
-    //     expect(response.status).toBe(200)
-    //     expect(response.body).toHaveProperty('token')
+    expect(response.status).toBe(200);
+    expect(response.body).toHaveProperty('token');
 
-    //     const authPasses = await application
-    //         .get('/v1/me')
-    //         .set('authorization', `Bearer ${response.body.token}`)
+    const authPasses = await application
+      .get('/v1/me')
+      .set('authorization', `Bearer ${response.body.token}`);
 
-    //     console.log("Response", authPasses.body);
-    // })
-})
+    console.log('Response', authPasses.body);
+  });
+  */
+});
