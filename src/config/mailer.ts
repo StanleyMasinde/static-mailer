@@ -4,28 +4,24 @@ import { renderFile } from 'pug'
 import { EmailOptions } from '../types'
 
 
-let mailerPort: number
-let mailerSecure: boolean
-if (process.env.MAILER_PORT) {
-    mailerPort = +process.env.MAILER_PORT
-} else {
-    mailerPort = 1025
-}
-if (process.env.MAILER_SECURE && process.env.MAILER_SECURE == "true") {
-    mailerSecure = true
-} else {
-    mailerSecure = false
-}
+const {
+    MAILER_PORT = '1025',
+    MAILER_SECURE = 'false',
+    MAILER_HOST = 'localhost',
+    MAILER_USERNAME,
+    MAILER_PASSWORD,
+    APP_URL = 'https://staticmailer.test',
+  } = process.env;
 
 const transport = nodemailer.createTransport({
-    host: process.env.MAILER_HOST || "localhost",
-    port: mailerPort,
-    secure: mailerSecure,
+    host: MAILER_HOST,
+    port: parseInt(MAILER_PORT),
+    secure: MAILER_SECURE === 'true',
     auth: {
-        user: process.env.MAILER_USERNAME,
-        pass: process.env.MAILER_PASSWORD,
+      user: MAILER_USERNAME,
+      pass: MAILER_PASSWORD,
     },
-});
+  });
 
 /**
  * Deliver a given email to the intended user
@@ -37,17 +33,17 @@ const transport = nodemailer.createTransport({
  * @returns 
  */
 export const fowardEmail = async (recipientEmail: string, subject: string, senderEmail: string, message: string, template: string = 'deliver') => {
-    const timestamp =  new Date().toUTCString()
+    const timestamp = new Date().toUTCString()
     const text = readFileSync(`./templates/${template}.txt`)
-    .toString()
-    .replaceAll('#{{ email }}', senderEmail)
-    .replaceAll('#{{ message }}', message)
-    .replaceAll('#{{ timestamp }}', timestamp)
+        .toString()
+        .replace(/#{{ email }}/g, senderEmail)
+        .replace(/#{{ message }}/g, message)
+        .replace(/#{{ timestamp }}/g, timestamp)
     const tx = await transport.sendMail({
         subject: `[StaticMailer] - ${subject}`,
         replyTo: senderEmail,
         text,
-        html: renderFile(`./templates/${template}.pug`, { 
+        html: renderFile(`./templates/${template}.pug`, {
             pretty: true,
             email: senderEmail,
             message,
@@ -73,7 +69,7 @@ export const sendMail = async (mailOptions: EmailOptions) => {
         await transport.sendMail({
             subject: mailOptions.subject,
             text,
-            html: renderFile(`./templates/${mailOptions.template}.pug`, { 
+            html: renderFile(`./templates/${mailOptions.template}.pug`, {
                 pretty: true,
                 data: mailOptions.data,
                 appUrl: process.env.APP_URL || 'https://staticmailer.test'
@@ -85,6 +81,6 @@ export const sendMail = async (mailOptions: EmailOptions) => {
             }
         })
     } catch (error) {
-        
+
     }
 }

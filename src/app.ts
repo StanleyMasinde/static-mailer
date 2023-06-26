@@ -3,6 +3,7 @@ dotEnv.config()
 
 import Koa, { Context } from 'koa'
 import { koaBody } from 'koa-body'
+import cors from '@koa/cors'
 import * as Sentry from "@sentry/node";
 import { indexRoutes, allowedIndexMethods } from './routes'
 import { publicApiRoutes, allowedPublicApiMethods } from './routes/publicapi'
@@ -25,6 +26,7 @@ app.on("error", (err, ctx) => {
 
 
 // Middlewares
+app.use(cors())
 app.use(koaBody())
 // Routes 
 app.use(indexRoutes())

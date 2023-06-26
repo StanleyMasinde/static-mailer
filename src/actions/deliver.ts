@@ -1,37 +1,52 @@
 import { Context } from "koa";
-import { ApiKeyTable, EmailRequest, UserTable } from "../types";
+import { EmailRequest, UserTable } from "../types";
 import { fowardEmail } from "../config/mailer";
 import { database } from "../config/database";
 
 /**
- * Receive an email and deliver it the use user's mailbox
- * @param ctx 
+ * Receive an email and deliver it to the user's mailbox
+ * @param ctx Koa context
  */
-export const deliverEmail = async (ctx: Context) => {
-    const body = ctx.request.body as EmailRequest
-    const keyInDB = await database<ApiKeyTable>('api_keys')
-    .where('key', ctx.params.apiKey)
-    .innerJoin<UserTable>('users', 'users.id', 'api_keys.user_id')
-    .first('email')
+export const deliverEmail = async (ctx: Context): Promise<void> => {
+  const { apiKey } = ctx.params;
+  const body = ctx.request.body as EmailRequest;
+
+  try {
+    const keyInDB = await database<UserTable>("api_keys")
+      .select("users.email")
+      .join("users", "users.id", "=", "api_keys.user_id")
+      .where("api_keys.key", apiKey)
+      .first();
+
     if (keyInDB) {
-        sendSuccessResponse();
-        return await fowardEmail(keyInDB.email , body.subject, body.email, body.message)
+      await fowardEmail(keyInDB.email, body.subject, body.email, body.message);
+      sendSuccessResponse(ctx);
+    } else {
+      sendNotFoundResponse(ctx);
     }
-    return sendNotFoundResponse();
+  } catch (error) {
+    console.error("An error occurred while delivering the email:", error);
+    sendErrorResponse(ctx, "Internal Server Error");
+  }
+};
 
-    function sendSuccessResponse() {
-        ctx.status = 200;
-        ctx.body = {
-            message: "Message on it's way"
-        };
-        return
-    }
+function sendSuccessResponse(ctx: Context): void {
+  ctx.status = 200;
+  ctx.body = {
+    message: "Message on its way",
+  };
+}
 
-    function sendNotFoundResponse() {
-        ctx.status = 404;
-        ctx.body = {
-            message: "The provided API key is invalid"
-        };
-        return;
-    }
+function sendNotFoundResponse(ctx: Context): void {
+  ctx.status = 404;
+  ctx.body = {
+    message: "The provided API key is invalid",
+  };
+}
+
+function sendErrorResponse(ctx: Context, message: string): void {
+  ctx.status = 500;
+  ctx.body = {
+    message,
+  };
 }
