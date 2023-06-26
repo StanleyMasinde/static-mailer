@@ -2,7 +2,7 @@ require('dotenv').config()
 const request = require('supertest')
 const app = require('../dist/app')
 const { faker } = require('@faker-js/faker')
-const { sign } = require('jsonwebtoken')
+const { database } = require('../dist/config/database')
 const application = request(app.default.callback())
 
 const user = {
@@ -12,6 +12,10 @@ const user = {
 }
 
 describe('Authentication tests', () => {
+    afterAll(async () => {
+        await database.destroy()
+    })
+
     test('Throw a 400 when the request body is missing', async () => {
         const response = await application
             .post('/v1/register')
@@ -53,7 +57,6 @@ describe('Authentication tests', () => {
                 email: user.email,
                 password: user.password
             })
-            console.log(response.body);
         expect(response.status).toBe(200)
         expect(response.body).toHaveProperty('token')
     })

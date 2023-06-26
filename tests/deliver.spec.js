@@ -2,6 +2,7 @@ require('dotenv').config()
 const request = require('supertest')
 const app = require('../dist/app')
 const application = app.default.callback()
+const { database } = require('../dist/config/database')
 const { faker } = require('@faker-js/faker')
 
 const requester = request(application)
@@ -12,6 +13,10 @@ const user = {
 }
 
 describe('Email delivery test', () => {
+    afterAll(async () => {
+        await database.destroy()
+    })
+
     test('Deliver an email', async () => {
         const registerUserRequest = await requester
             .post('/v1/register')
