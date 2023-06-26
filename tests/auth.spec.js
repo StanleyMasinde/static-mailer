@@ -6,7 +6,7 @@ const { database } = require('../dist/config/database')
 const application = request(app.default.callback())
 
 const user = {
-    name: faker.name.fullName(),
+    name: faker.person.fullName(),
     email: faker.internet.email(),
     password: faker.internet.password()
 }

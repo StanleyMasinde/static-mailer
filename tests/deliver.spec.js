@@ -7,7 +7,7 @@ const { faker } = require('@faker-js/faker')
 
 const requester = request(application)
 const user = {
-    name: faker.name.fullName(),
+    name: faker.person.fullName(),
     email: faker.internet.email(),
     password: faker.internet.password()
 }
