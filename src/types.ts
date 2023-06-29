@@ -64,3 +64,18 @@ export interface GoogleJWTPayload {
     iat: number
     exp: number
 }
+
+export interface EmailSubmissionTable {
+    id?: number
+    key_uuid?: string
+    subject?: string
+    message?: string
+    delivered_at?: string
+    created_at?: string
+    updated_at?: string
+}
+
+export interface ApiKeysUsersJoin {
+    email?: string
+    uuid?: string
+}

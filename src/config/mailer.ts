@@ -55,7 +55,6 @@ export const fowardEmail = async (recipientEmail: string, subject: string, sende
             address: 'no-reply@staticmailer.com'
         }
     })
-
     return true
 }
 
