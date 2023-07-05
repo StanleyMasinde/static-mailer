@@ -1,10 +1,12 @@
+import { randomInt } from 'node:crypto'
 import { Context, Next } from "koa";
-import { GoogleJWTPayload, LoginRequest, RegisterRequest, UserTable } from "../types";
+import { GoogleJWTPayload, LoginRequest, PasswordResetsTable, RegisterRequest, UserTable } from "../types";
 import { database } from "../config/database";
 import { compareHash, createHash } from "../config/hash";
 import { createToken, verifyToken } from "../config/jwt";
 import { sendMail } from "../config/mailer";
 import { JwtPayload, decode } from "jsonwebtoken";
+import { hash } from 'bcrypt';
 
 /**
  * Register a new user
@@ -160,6 +162,46 @@ export const authorize = async (ctx: Context, next: Next) => {
     }
 }
 
+
+/**
+ * Handle password reset request.
+ * 
+ */
+export const sendPasswordResetInstructions = async (ctx: Context) => {
+    try {
+        const email = ctx.request.body.email
+        const user = await database<UserTable>('users').where({ email }).first()
+        if (user) {
+            const code = randomInt(1, 100000)
+            const codeHash = await createHash(code.toString())
+            const date = new Date()
+            const currentMinutes = date.getMinutes();
+            date.setMinutes(currentMinutes + 60);
+            await database<PasswordResetsTable>('password_resets')
+                .insert({
+                    user_id: user.id,
+                    code: codeHash,
+                    expires_at: date
+                })
+            await sendMail({
+                template: 'passwordreset',
+                subject: 'Password reset notification',
+                receipient: user.email,
+                data: {
+                    code
+                }
+            })
+
+            ctx.body = {
+                message: "Check your email."
+            }
+        }
+    } catch (error) {
+        console.log(error);
+       ctx.throw('Server Error')
+    }
+}
+
 /**
  * Handle social auth
  */
@@ -185,7 +227,7 @@ export const socialAuth = async (ctx: Context) => {
         const userInfo = decode(token) as GoogleJWTPayload
         const email = userInfo.email
         const userInDb = await database<UserTable>('users').where('email', email).first()
-      
+
         if (userInDb) {
             const Payload: JwtPayload = {
                 sub: `${userInDb.id}`,
@@ -215,7 +257,7 @@ export const socialAuth = async (ctx: Context) => {
                 email: userInfo.email
             }
         }
-        const token2 = createToken(Payload) 
+        const token2 = createToken(Payload)
         ctx.body = {
             token: token2
         }

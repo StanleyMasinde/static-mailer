@@ -79,3 +79,10 @@ export interface ApiKeysUsersJoin {
     email?: string
     uuid?: string
 }
+
+export interface PasswordResetsTable {
+    id: number,
+    user_id: number,
+    code: string,
+    expires_at: Date
+}
