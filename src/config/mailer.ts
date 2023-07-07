@@ -63,11 +63,17 @@ export const fowardEmail = async (recipientEmail: string, subject: string, sende
  * @param mailOptions 
  */
 export const sendMail = async (mailOptions: EmailOptions) => {
-    const text = readFileSync(`./templates/${mailOptions.template}.txt`)
+    const text = readFileSync(`./templates/${mailOptions.template}.txt`).toString('utf8')
+    let subsititutedText: string = text
+    for (const item in mailOptions.data) {
+        const regex = new RegExp(`\\{${item}\\}`, 'g');
+        subsititutedText = text.replace(regex, mailOptions.data[item])
+    }
+
     try {
         await transport.sendMail({
             subject: mailOptions.subject,
-            text,
+            text: subsititutedText,
             html: renderFile(`./templates/${mailOptions.template}.pug`, {
                 pretty: true,
                 data: mailOptions.data,
