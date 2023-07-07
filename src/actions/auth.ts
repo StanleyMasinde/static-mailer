@@ -172,7 +172,7 @@ export const sendPasswordResetInstructions = async (ctx: Context) => {
         const email = ctx.request.body.email
         const user = await database<UserTable>('users').where({ email }).first()
         if (user) {
-            const code = randomInt(1, 100000)
+            const code = randomInt(99999, 1000000)
             const codeHash = await createHash(code.toString())
             const date = new Date()
             const currentMinutes = date.getMinutes();
