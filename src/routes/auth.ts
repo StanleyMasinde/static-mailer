@@ -1,6 +1,6 @@
 import koaRouter from "@koa/router"
 import { koaBody } from 'koa-body'
-import { authorize, login, me, register, sendPasswordResetInstructions, socialAuth } from "../actions/auth"
+import { authorize, changeUserPassword, login, me, register, sendPasswordResetInstructions, socialAuth } from "../actions/auth"
 import { validate } from "../actions/validate"
 
 const router = new koaRouter({ prefix: '/v1' })
@@ -25,6 +25,15 @@ router.post('/password-reset',
         email: 'required|email'
     }),
     sendPasswordResetInstructions
+)
+
+router.post('/password-update',
+    validate({
+        code: 'required',
+        email: 'required|email',
+        password: 'required'
+    }),
+    changeUserPassword
 )
 
 router.get('/me', authorize, me)

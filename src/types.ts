@@ -86,3 +86,21 @@ export interface PasswordResetsTable {
     code: string,
     expires_at: Date
 }
+
+export interface ChangePasswordRequest {
+    /**
+     * The email of the user.
+     * This will be used to find the user who is making
+     * The change request. We cannot use the code since is hashed.
+     */
+    email: string,
+    /**
+     * The unique code that was sent to the user
+     * This should be validated and authenticated.
+     */
+    code: string,
+    /**
+     * The new password that the user has chosen.
+     */
+    password: string
+}
