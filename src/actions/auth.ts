@@ -206,58 +206,63 @@ export const sendPasswordResetInstructions = async (ctx: Context) => {
  * Change user password.
  */
 export const changeUserPassword = async (ctx: Context) => {
-    const requestBody = ctx.request.body as ChangePasswordRequest
-    const user = await database<UserTable>('users')
-        .where('email', requestBody.email)
-        .first()
-
-    if (user) {
-        const resetCode = await database<PasswordResetsTable>('password_resets_table')
-            .where('user_id', user.id)
+    try {
+        const requestBody = ctx.request.body as ChangePasswordRequest
+        const user = await database<UserTable>('users')
+            .where('email', requestBody.email)
             .first()
-
-        if (resetCode) {
-            const codeMatches = await compareHash(requestBody.code, resetCode.code)
-            if (codeMatches) {
-                const newPassword = await createHash(requestBody.password)
-                await database<UserTable>('users')
-                    .where('id', user.id)
-                    .update({ 'password': newPassword })
-
-                ctx.header["content-type"] = 'application/vnd.api+json'
-                ctx.body = {
-                    data: {
-                        id: user.id,
-                        type: "password_resets",
-                        attributes: {
-                            status: "success",
-                            message: "Your password has been successfully reset."
+    
+        if (user) {
+            const resetCode = await database<PasswordResetsTable>('password_resets')
+                .where('user_id', user.id)
+                .first()
+    
+            if (resetCode) {
+                const codeMatches = await compareHash(requestBody.code, resetCode.code)
+                
+                if (codeMatches) {
+                    const newPassword = await createHash(requestBody.password)
+                    await database<UserTable>('users')
+                        .where('id', user.id)
+                        .update({ 'password': newPassword })
+                    ctx.header["content-type"] = 'application/vnd.api+json'
+                    ctx.body = {
+                        data: {
+                            id: user.id,
+                            type: "password_resets",
+                            attributes: {
+                                status: "success",
+                                message: "Your password has been successfully reset."
+                            }
                         }
                     }
                 }
-            }
-            else {
-                sendFailedResponse(user)
-            }
-        } else {
-            sendFailedResponse(user);
-        }
-    }
-
-    function sendFailedResponse(user: UserTable) {
-        ctx.header["content-type"] = 'application/vnd.api+json';
-        ctx.status = 422;
-        ctx.body = {
-            errors: [
-                {
-                    id: user.id,
-                    status: "422",
-                    code: "invalid_password_reset_code",
-                    title: "Invalid Password Reset Code",
-                    detail: "The password reset code is invalid or has expired."
+                else {
+                    sendFailedResponse(user)
                 }
-            ]
-        };
+            } else {
+                sendFailedResponse(user);
+            }
+        }
+    
+        function sendFailedResponse(user: UserTable) {
+            ctx.header["content-type"] = 'application/vnd.api+json';
+            ctx.status = 422;
+            ctx.body = {
+                errors: [
+                    {
+                        id: user.id,
+                        status: "422",
+                        code: "invalid_password_reset_code",
+                        title: "Invalid Password Reset Code",
+                        detail: "The password reset code is invalid or has expired."
+                    }
+                ]
+            };
+        }
+    } catch (error) {
+        console.log(error);
+        ctx.throw("Something broke!")
     }
 }
 
