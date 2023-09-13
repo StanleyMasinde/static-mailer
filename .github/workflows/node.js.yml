@@ -14,7 +14,6 @@ jobs:
         uses: actions/setup-node@v3
         with:
           node-version: 20.x
-          cache: "pnpm"
       - name: Start Mailpit
         uses: StanleyMasinde/mailpit-action@v0.1.0
       - name: Setup MySQL database
