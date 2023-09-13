@@ -2,6 +2,7 @@ require('dotenv').config()
 const request = require('supertest')
 const app = require('../dist/app')
 const { faker } = require('@faker-js/faker')
+const { createToken } = require('../dist/config/jwt')
 const { database } = require('../dist/config/database')
 const application = request(app.default.callback())
 
@@ -12,6 +13,8 @@ const user = {
 };
 
 let token = ''
+let userId = null
+let keyUiid = faker.string.uuid()
 
 describe('Authentication tests', () => {
   afterAll(async () => {
@@ -31,6 +34,16 @@ describe('Authentication tests', () => {
     expect(response.status).toBe(200);
     expect(response.body).toHaveProperty('token');
     expect(response.body.user).toHaveProperty('id', 'name', 'email');
+  });
+
+  test('User registration fails when email exists', async () => {
+    const response = await application
+      .post('/v1/register')
+      .send(user);
+
+    expect(response.status).toBe(422);
+    expect(response.body).toHaveProperty('errors');
+    expect(response.body.errors[0].message).toBe('This email is already registered');
   });
 
   test('User registration fails without request body', async () => {
@@ -82,6 +95,29 @@ describe('Authentication tests', () => {
       .get('/v1/me')
       .set('Authorization', `Bearer ${token}`)
 
-      console.log(response.body);
+    expect(response.body).toHaveProperty('user')
+    userId = response.body.user.id
+  })
+
+  test('Get user API KEYS', async () => {
+    await database('api_keys')
+      .insert({
+        uuid: keyUiid,
+        key: faker.string.alphanumeric(16),
+        user_id: userId
+      })
+    const response = await application
+      .get('/v1/apiKeys')
+      .set('Authorization', `Bearer ${token}`)
+
+    expect(response.body.data.length).toBe(1)
+  })
+
+  test('Delete an API KEY', async () => {
+    const response = await application
+      .delete(`/v1/apiKeys/${keyUiid}`)
+      .set('Authorization', `Bearer ${token}`)
+    expect(response.status).toBe(200)
+    expect(response.body.data).toBe('Key deleted.')
   })
 });

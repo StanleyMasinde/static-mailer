@@ -27,8 +27,6 @@ export const createApiKey = async (ctx: Context) => {
       apiKey
     };
   } catch (error) {
-    // Handle the error appropriately (e.g., log, send error response)
-    console.error(error);
     ctx.throw(500, "Internal Server Error");
   }
 };
@@ -77,7 +75,7 @@ export const deleteApiKey = async (ctx: Context) => {
       return sendNotFoundResponse(apiKeyParam);
     }
 
-    if (apiKey.user_id === ctx.state.user.sub) {
+    if (apiKey.user_id == ctx.state.user.sub) {
       await database<ApiKeyTable>('api_keys').where('uuid', apiKeyParam).delete();
       ctx.body = {
         data: "Key deleted."

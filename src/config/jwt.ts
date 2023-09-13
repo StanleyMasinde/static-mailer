@@ -8,14 +8,9 @@ const secret: Secret = process.env.JWT_SECRET || 'secret';
  * @returns The generated JWT
  */
 export const createToken = (payload: JwtPayload): string => {
-  try {
-    return sign(payload, secret, {
-      expiresIn: '2 days',
-    });
-  } catch (error) {
-    console.error('An error occurred while creating the JWT:', error);
-    throw error;
-  }
+  return sign(payload, secret, {
+    expiresIn: '2 days',
+  })
 };
 
 /**
@@ -24,10 +19,5 @@ export const createToken = (payload: JwtPayload): string => {
  * @returns The decoded payload if the token is valid
  */
 export const verifyToken = (token: string): JwtPayload => {
-  try {
-    return verify(token, secret) as JwtPayload;
-  } catch (error) {
-    console.error('An error occurred while verifying the JWT:', error);
-    throw error;
-  }
+  return verify(token, secret) as JwtPayload
 };

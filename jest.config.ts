@@ -4,6 +4,7 @@
  */
 
 export default {
+  verbose: true,
   clearMocks: true,
   collectCoverage: true,
   coverageDirectory: "coverage",

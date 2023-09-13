@@ -47,4 +47,16 @@ describe('Email delivery test', () => {
 
     expect(deliveryResponse.status).toBe(200);
   });
+
+  test('Return 404 when key is not found', async () => {
+    const deliveryResponse = await requester
+      .post('/api/v1/deliver/some-key')
+      .send({
+        subject: faker.lorem.sentence(),
+        email: faker.internet.email(),
+        message: faker.lorem.paragraphs(),
+      });
+
+    expect(deliveryResponse.status).toBe(404);
+  });
 });
