@@ -21,9 +21,13 @@ jobs:
         run: |
           sudo systemctl start mysql.service
           mysql -u root -proot  -e "create database staticsend"
+      - name: Setup PNPM
+        run: |
+            corepack enable
+            corepack prepare pnpm@latest --activate
       - name: Setup environment variables
         run: cp .env.example .env
       - name: Install deps
-        run: npm ci
+        run: pnpm i
       - name: Test 🧪
         run: npm test
