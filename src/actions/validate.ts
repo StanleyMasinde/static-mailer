@@ -44,7 +44,7 @@ const ruleFactories: { [key: string]: ValidationRuleFactory } = {
   },
 };
 
-export const validate = (param: { [key: string]: string }) => {
+export const validate = (param: Record<string, string>) => {
   return async (ctx: Context, next: Next) => {
     const errors: Array<ValidationMessage> = [];
     const body = ctx.request.body;
