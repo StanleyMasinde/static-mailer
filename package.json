@@ -6,7 +6,7 @@
   "directories": {
     "test": "tests"
   },
-  "repository": "git@github.com:StanleyMasinde/static-send.git",
+  "repository": "git+ssh://git@github.com/StanleyMasinde/static-send.git",
   "private": true,
   "scripts": {
     "start": "node dist/server.js",
@@ -56,5 +56,9 @@
     "nodemailer": "^6.9.1",
     "pug": "^3.0.2",
     "uuid": "^9.0.0"
-  }
+  },
+  "bugs": {
+    "url": "https://github.com/StanleyMasinde/static-send/issues"
+  },
+  "homepage": "https://github.com/StanleyMasinde/static-send#readme"
 }
