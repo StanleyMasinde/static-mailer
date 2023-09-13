@@ -11,6 +11,8 @@ const user = {
   password: faker.internet.password()
 };
 
+let token = ''
+
 describe('Authentication tests', () => {
   afterAll(async () => {
     await database.destroy();
@@ -56,6 +58,7 @@ describe('Authentication tests', () => {
 
     expect(response.status).toBe(200);
     expect(response.body).toHaveProperty('token');
+    token = response.body.token
   });
 
   test('User login fails without request body', async () => {
@@ -74,52 +77,11 @@ describe('Authentication tests', () => {
     expect(response.status).toBe(401);
   });
 
-  // Uncomment and update the following tests based on your needs
-  /*
-  test('Handle Google registration', async () => {
-    const response = await application
-      .post('/v1/social-auth/google')
-      .send({
-        token: sign({
-          sub: faker.random.numeric(),
-          email: faker.internet.email(),
-          name: faker.name.fullName()
-        }, 'secret')
-      });
-
-    expect(response.body).toHaveProperty('token');
-  });
-
-  test('Handle Google login', async () => {
-    const response = await application
-      .post('/v1/social-auth/google')
-      .send({
-        token: sign({
-          sub: faker.random.numeric(),
-          email: user.email,
-          name: user.password
-        }, 'secret')
-      });
-
-    expect(response.body).toHaveProperty('token');
-  });
-
   test('Get the current user', async () => {
     const response = await application
-      .post('/v1/login')
-      .send({
-        email: user.email,
-        password: user.password
-      });
-
-    expect(response.status).toBe(200);
-    expect(response.body).toHaveProperty('token');
-
-    const authPasses = await application
       .get('/v1/me')
-      .set('authorization', `Bearer ${response.body.token}`);
+      .set('Authorization', `Bearer ${token}`)
 
-    console.log('Response', authPasses.body);
-  });
-  */
+      console.log(response.body);
+  })
 });

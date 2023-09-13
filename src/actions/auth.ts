@@ -115,11 +115,14 @@ export const login = async (ctx: Context) => {
  * Get the currently authenticated user
  * @param ctx Koa.context
  */
-export const me = (ctx: Context) => {
+export const me = async (ctx: Context) => {
     const bearerToken = ctx.request.header['authorization']?.split(' ')[1]
 
     if (bearerToken) {
-        const user = verifyToken(bearerToken)
+        const userInToken = verifyToken(bearerToken)
+        const user = await database<UserTable>('users')
+            .where('id', userInToken.sub)
+            .first()
         ctx.body = {
             user
         }
@@ -211,15 +214,15 @@ export const changeUserPassword = async (ctx: Context) => {
         const user = await database<UserTable>('users')
             .where('email', requestBody.email)
             .first()
-    
+
         if (user) {
             const resetCode = await database<PasswordResetsTable>('password_resets')
                 .where('user_id', user.id)
                 .first()
-    
+
             if (resetCode) {
                 const codeMatches = await compareHash(requestBody.code, resetCode.code)
-                
+
                 if (codeMatches) {
                     const newPassword = await createHash(requestBody.password)
                     await database<UserTable>('users')
@@ -244,7 +247,7 @@ export const changeUserPassword = async (ctx: Context) => {
                 sendFailedResponse(user);
             }
         }
-    
+
         function sendFailedResponse(user: UserTable) {
             ctx.header["content-type"] = 'application/vnd.api+json';
             ctx.status = 422;
