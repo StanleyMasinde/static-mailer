@@ -5,23 +5,22 @@ import { EmailOptions } from '../types'
 
 
 const {
-    MAILER_PORT = '1025',
-    MAILER_SECURE = 'false',
-    MAILER_HOST = 'localhost',
-    MAILER_USERNAME,
-    MAILER_PASSWORD,
-    APP_URL = 'https://staticmailer.test',
-  } = process.env;
+	MAILER_PORT = '1025',
+	MAILER_SECURE = 'false',
+	MAILER_HOST = 'localhost',
+	MAILER_USERNAME,
+	MAILER_PASSWORD,
+} = process.env
 
 const transport = nodemailer.createTransport({
-    host: MAILER_HOST,
-    port: parseInt(MAILER_PORT),
-    secure: MAILER_SECURE === 'true',
-    auth: {
-      user: MAILER_USERNAME,
-      pass: MAILER_PASSWORD,
-    },
-  });
+	host: MAILER_HOST,
+	port: parseInt(MAILER_PORT),
+	secure: MAILER_SECURE === 'true',
+	auth: {
+		user: MAILER_USERNAME,
+		pass: MAILER_PASSWORD,
+	},
+})
 
 /**
  * Deliver a given email to the intended user
@@ -33,29 +32,29 @@ const transport = nodemailer.createTransport({
  * @returns 
  */
 export const fowardEmail = async (recipientEmail: string, subject: string, senderEmail: string, message: string, template: string = 'deliver') => {
-    const timestamp = new Date().toUTCString()
-    const text = readFileSync(`./templates/${template}.txt`)
-        .toString()
-        .replace(/#{{ email }}/g, senderEmail)
-        .replace(/#{{ message }}/g, message)
-        .replace(/#{{ timestamp }}/g, timestamp)
-    const tx = await transport.sendMail({
-        subject: `[StaticMailer] - ${subject}`,
-        replyTo: senderEmail,
-        text,
-        html: renderFile(`./templates/${template}.pug`, {
-            pretty: true,
-            email: senderEmail,
-            message,
-            timestamp
-        }),
-        to: recipientEmail,
-        from: {
-            name: 'Static Mailer',
-            address: 'no-reply@staticmailer.com'
-        }
-    })
-    return true
+	const timestamp = new Date().toUTCString()
+	const text = readFileSync(`./templates/${template}.txt`)
+		.toString()
+		.replace(/#{{ email }}/g, senderEmail)
+		.replace(/#{{ message }}/g, message)
+		.replace(/#{{ timestamp }}/g, timestamp)
+	await transport.sendMail({
+		subject: `[StaticMailer] - ${subject}`,
+		replyTo: senderEmail,
+		text,
+		html: renderFile(`./templates/${template}.pug`, {
+			pretty: true,
+			email: senderEmail,
+			message,
+			timestamp
+		}),
+		to: recipientEmail,
+		from: {
+			name: 'Static Mailer',
+			address: 'no-reply@staticmailer.com'
+		}
+	})
+	return true
 }
 
 /**
@@ -63,29 +62,28 @@ export const fowardEmail = async (recipientEmail: string, subject: string, sende
  * @param mailOptions 
  */
 export const sendMail = async (mailOptions: EmailOptions) => {
-    const text = readFileSync(`./templates/${mailOptions.template}.txt`).toString('utf8')
-    let subsititutedText: string = text
-    for (const item in mailOptions.data) {
-        const regex = new RegExp(`\\{${item}\\}`, 'g');
-        subsititutedText = text.replace(regex, mailOptions.data[item])
-    }
+	const text = readFileSync(`./templates/${mailOptions.template}.txt`).toString('utf8')
+	let subsititutedText: string = text
 
-    try {
-        await transport.sendMail({
-            subject: mailOptions.subject,
-            text: subsititutedText,
-            html: renderFile(`./templates/${mailOptions.template}.pug`, {
-                pretty: true,
-                data: mailOptions.data,
-                appUrl: process.env.APP_URL || 'https://staticmailer.test'
-            }),
-            to: mailOptions.receipient,
-            from: {
-                name: 'Static Mailer',
-                address: 'no-reply@staticmailer.com'
-            }
-        })
-    } catch (error) {
+	for (const item in mailOptions.data) {
+		const itemSub = mailOptions.data[item]
+		const regex = new RegExp(`\\{${item}\\}`, 'g')
+		subsititutedText = text.replace(regex, itemSub.toString())
+	}
 
-    }
+	
+	await transport.sendMail({
+		subject: mailOptions.subject,
+		text: subsititutedText,
+		html: renderFile(`./templates/${mailOptions.template}.pug`, {
+			pretty: true,
+			data: mailOptions.data,
+			appUrl: process.env.APP_URL || 'https://staticmailer.test'
+		}),
+		to: mailOptions.receipient,
+		from: {
+			name: 'Static Mailer',
+			address: 'no-reply@staticmailer.com'
+		}
+	})
 }

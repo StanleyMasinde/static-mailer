@@ -1,4 +1,4 @@
-import { Knex } from "knex";
+import { Knex } from 'knex'
 
 
 /**
@@ -7,12 +7,12 @@ import { Knex } from "knex";
  * @returns 
  */
 export async function up(knex: Knex): Promise<void> {
-    return knex.schema.createTable('password_resets', (table) => {
-        table.bigIncrements('id').primary().unsigned()
-        table.bigInteger('user_id').unsigned()
-        table.string('code')
-        table.timestamp('expires_at')
-    })
+	return knex.schema.createTable('password_resets', (table) => {
+		table.bigIncrements('id').primary().unsigned()
+		table.bigInteger('user_id').unsigned()
+		table.string('code')
+		table.timestamp('expires_at')
+	})
 }
 
 /**
@@ -20,6 +20,6 @@ export async function up(knex: Knex): Promise<void> {
  * @param knex 
  */
 export async function down(knex: Knex): Promise<void> {
-    return knex.schema.dropTable('password_resets')
+	return knex.schema.dropTable('password_resets')
 }
 

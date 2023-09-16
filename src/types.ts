@@ -16,6 +16,7 @@ export interface LoginRequest {
 }
 
 export interface UserTable {
+    [key: string]: string | number | Date;
     id: number,
     name: string,
     email: string,
@@ -50,19 +51,21 @@ export interface EmailOptions {
     subject: string,
     receipient: string,
     template: string,
-    data: { [key: string]: any }
+    data: Record<string, string | number | Date>
 }
 
+// TODO: #8 Type this correctly
 export interface GoogleJWTPayload {
+    [key: string]: string;
     email: string,
-    email_verified: boolean,
+    //email_verified: boolean,
     azp: string,
     name: string
-    picture?: string,
+    //picture?: string,
     given_name: string,
     family_name: string,
-    iat: number
-    exp: number
+    //iat: number
+    //exp: number
 }
 
 export interface EmailSubmissionTable {
