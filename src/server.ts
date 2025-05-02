@@ -1,6 +1,6 @@
 import { createSecureServer } from 'node:http2'
 import { readFileSync } from 'node:fs'
-import app from './app'
+import app from './app.js'
 
 let port: number
 if (process.env.APP_PORT) {

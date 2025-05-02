@@ -1,7 +1,7 @@
 import { Context } from 'koa'
-import { ApiKeysUsersJoin, EmailRequest, EmailSubmissionTable } from '../types'
-import { fowardEmail } from '../config/mailer'
-import { database } from '../config/database'
+import { ApiKeysUsersJoin, EmailRequest, EmailSubmissionTable } from '../types.js'
+import { fowardEmail } from '../config/mailer.js'
+import { database } from '../config/database.js'
 
 /**
  * Receive an email and deliver it to the user's mailbox

@@ -1,7 +1,7 @@
 import { readFileSync } from 'fs'
 import nodemailer from 'nodemailer'
 import { renderFile } from 'pug'
-import { EmailOptions } from '../types'
+import { EmailOptions } from '../types.js'
 
 
 const {

@@ -1,4 +1,4 @@
-import { compare, hash } from 'bcrypt'
+import * as bcrypt from 'bcrypt'
 
 const saltRounds: number = 10
 
@@ -7,7 +7,7 @@ const saltRounds: number = 10
  * @param {string} password the password to hash
  * @returns {Promise<String>} password hash
  */
-export const createHash = async (password: string): Promise<string> => await hash(password, saltRounds)
+export const createHash = async (password: string): Promise<string> => await bcrypt.hash(password, saltRounds)
 
 /**
  * Compare password hash
@@ -15,4 +15,4 @@ export const createHash = async (password: string): Promise<string> => await has
  * @param {string} hash 
  * @returns {Promise<Boolean>} password match
  */
-export const compareHash = async (password: string, hash: string): Promise<boolean> => await compare(password, hash)
+export const compareHash = async (password: string, hash: string): Promise<boolean> => await bcrypt.compare(password, hash)

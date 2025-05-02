@@ -1,7 +1,7 @@
 import koaRouter from '@koa/router'
-import { validate } from '../actions/validate'
-import { createApiKey, deleteApiKey, getUserApiKeys } from '../actions/apiKey'
-import { authorize } from '../actions/auth'
+import { validate } from '../actions/validate.js'
+import { createApiKey, deleteApiKey, getUserApiKeys } from '../actions/apiKey.js'
+import { authorize } from '../actions/auth.js'
 
 const router = new koaRouter({ prefix: '/v1' })
 

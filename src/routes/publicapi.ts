@@ -1,6 +1,6 @@
 import koaRouter from '@koa/router'
-import { deliverEmail } from '../actions/deliver'
-import { validate } from '../actions/validate'
+import { deliverEmail } from '../actions/deliver.js'
+import { validate } from '../actions/validate.js'
 
 const router = new koaRouter()
 

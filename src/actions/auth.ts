@@ -1,10 +1,10 @@
 import { randomInt } from 'node:crypto'
 import { Context, Next } from 'koa'
-import { GoogleJWTPayload, LoginRequest, PasswordResetsTable, RegisterRequest, UserTable, ChangePasswordRequest } from '../types'
-import { database } from '../config/database'
-import { compareHash, createHash } from '../config/hash'
-import { createToken, verifyToken } from '../config/jwt'
-import { sendMail } from '../config/mailer'
+import { GoogleJWTPayload, LoginRequest, PasswordResetsTable, RegisterRequest, UserTable, ChangePasswordRequest } from '../types.js'
+import { database } from '../config/database.js'
+import { compareHash, createHash } from '../config/hash.js'
+import { createToken, verifyToken } from '../config/jwt.js'
+import { sendMail } from '../config/mailer.js'
 import { JwtPayload, decode } from 'jsonwebtoken'
 
 /**

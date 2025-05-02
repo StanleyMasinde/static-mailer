@@ -1,8 +1,8 @@
 import { randomBytes } from 'crypto'
 import { v4 as uuidv4 } from 'uuid'
 import { Context } from 'koa'
-import { database } from '../config/database'
-import { ApiKeyTable } from '../types'
+import { database } from '../config/database.js'
+import { ApiKeyTable } from '../types.js'
 import { JwtPayload } from 'jsonwebtoken'
 
 /**

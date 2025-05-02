@@ -1,7 +1,7 @@
 import koaRouter from '@koa/router'
 import { koaBody } from 'koa-body'
-import { authorize, changeUserPassword, login, me, register, sendPasswordResetInstructions, socialAuth } from '../actions/auth'
-import { validate } from '../actions/validate'
+import { authorize, changeUserPassword, login, me, register, sendPasswordResetInstructions, socialAuth } from '../actions/auth.js'
+import { validate } from '../actions/validate.js'
 
 const router = new koaRouter({ prefix: '/v1' })
 

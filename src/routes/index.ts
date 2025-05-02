@@ -1,5 +1,5 @@
 import koaRouter from '@koa/router'
-import { ping } from '../actions/ping'
+import { ping } from '../actions/ping.js'
 
 const router = new koaRouter()
 

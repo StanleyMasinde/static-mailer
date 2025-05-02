@@ -1,5 +1,5 @@
 import { Context, Next } from 'koa'
-import { ValidationMessage, ValidationRuleFactory } from '../types'
+import { ValidationMessage, ValidationRuleFactory } from '../types.js'
 
 function required(value: string | number): boolean {
 	return value !== null && value !== undefined && value.toString().length > 0

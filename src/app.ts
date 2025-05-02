@@ -5,10 +5,10 @@ import Koa from 'koa'
 import { koaBody } from 'koa-body'
 import cors from '@koa/cors'
 import * as Sentry from '@sentry/node'
-import { indexRoutes, allowedIndexMethods } from './routes'
-import { publicApiRoutes, allowedPublicApiMethods } from './routes/publicapi'
-import { authRoutes, allowedAuthMethods } from './routes/auth'
-import { userRoutes, allowedUserMethods } from './routes/user'
+import { indexRoutes, allowedIndexMethods } from './routes/index.js'
+import { publicApiRoutes, allowedPublicApiMethods } from './routes/publicapi.js'
+import { authRoutes, allowedAuthMethods } from './routes/auth.js'
+import { userRoutes, allowedUserMethods } from './routes/user.js'
 
 
 const app = new Koa({ proxy: true })
