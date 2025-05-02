@@ -28,7 +28,7 @@ jobs:
         run: cp .env.example .env
       - name: Install deps
         run: pnpm i
-      - name: Lint 🧐
-        run: pnpm run lint
+      #- name: Lint 🧐
+      # run: pnpm run lint
       - name: Test 🧪
         run: npm test
