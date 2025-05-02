@@ -1,8 +1,8 @@
-require('dotenv').config();
-const request = require('supertest');
-const app = require('../dist/app');
-const { database } = require('../dist/config/database');
-const { faker } = require('@faker-js/faker');
+import 'dotenv/config'
+import request from 'supertest';
+import app from '../dist/app';
+import { database } from '../dist/config/database';
+import { faker } from '@faker-js/faker';
 
 const application = app.default.callback();
 const requester = request(application);

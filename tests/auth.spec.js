@@ -1,10 +1,9 @@
-require('dotenv').config()
-const request = require('supertest')
-const app = require('../dist/app')
-const { faker } = require('@faker-js/faker')
-const { createToken } = require('../dist/config/jwt')
-const { database } = require('../dist/config/database')
-const application = request(app.default.callback())
+import 'dotenv/config'
+import request from 'supertest'
+import app from '../dist/app'
+import { faker } from '@faker-js/faker'
+import { database } from '../dist/config/database'
+const application = request(app.callback())
 
 const user = {
   name: faker.person.fullName(),

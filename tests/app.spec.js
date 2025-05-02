@@ -1,7 +1,7 @@
-const request = require('supertest')
-const app = require('../dist/app')
-const { database } = require('../dist/config/database')
-const application = app.default.callback()
+import request from 'supertest'
+import app from '../dist/app'
+import { database } from '../dist/config/database'
+const application = app.callback()
 
 describe('General route tests', () => {
     test('Ping should return 200', async () => {

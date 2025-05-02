@@ -1,5 +1,5 @@
-require('dotenv').config();
-const { database } = require('../dist/config/database');
+import 'dotenv/config'
+import { database } from '../dist/config/database';
 
 describe('Database tests', () => {
   test('Database connection', async () => {
