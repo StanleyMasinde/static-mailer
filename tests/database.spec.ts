@@ -1,8 +1,8 @@
-import 'dotenv/config'
-import { database } from '../dist/config/database';
+import { describe, expect, it } from 'vitest';
+import { database } from '../src/config/database';
 
 describe('Database tests', () => {
-  test('Database connection', async () => {
+  it('Database connection', async () => {
     const query = database('users').select().toSQL();
     expect(query.sql).toBe('select * from `users`');
     expect(query.method).toBe('select');
