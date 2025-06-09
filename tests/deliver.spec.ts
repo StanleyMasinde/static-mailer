@@ -1,10 +1,12 @@
 import 'dotenv/config'
 import request from 'supertest';
-import app from '../dist/app';
-import { database } from '../dist/config/database';
+import app from '../src/app';
+import { database } from '../src/config/database';
 import { faker } from '@faker-js/faker';
+import { afterAll, describe, it } from 'vitest';
+import { expect } from 'vitest';
 
-const application = app.default.callback();
+const application = app.callback();
 const requester = request(application);
 const user = {
   name: faker.person.fullName(),
@@ -17,14 +19,14 @@ describe('Email delivery test', () => {
     await database.destroy();
   });
 
-  test('Deliver an email', async () => {
+  it('Deliver an email', async () => {
     const registerUserRequest = await requester
       .post('/v1/register')
       .send(user);
 
     expect(registerUserRequest.status).toBe(200);
     expect(registerUserRequest.body).toHaveProperty('token');
-    expect(registerUserRequest.body.user).toHaveProperty('id', 'name', 'email');
+    expect(registerUserRequest.body.user).toHaveProperty('email');
 
     const createApiKeyRequest = await requester
       .post('/v1/apiKeys')
@@ -48,7 +50,7 @@ describe('Email delivery test', () => {
     expect(deliveryResponse.status).toBe(200);
   });
 
-  test('Return 404 when key is not found', async () => {
+  it('Return 404 when key is not found', async () => {
     const deliveryResponse = await requester
       .post('/api/v1/deliver/some-key')
       .send({
