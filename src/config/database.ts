@@ -1,6 +1,6 @@
-import knex from 'knex'
+import { knex } from 'knex'
 
-export const database = knex.knex({
+export const database = knex({
 	client: process.env.DATABASE_CLIENT || 'mysql2',
 	connection: {
 		host: process.env.DATABASE_HOST || '127.0.0.1',
