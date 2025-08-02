@@ -1,5 +1,4 @@
-import * as dotEnv from 'dotenv'
-dotEnv.config()
+import 'dotenv/config'
 
 import Koa from 'koa'
 import { koaBody } from 'koa-body'
@@ -28,7 +27,7 @@ app.on('error', (err, ctx) => {
 // Middlewares
 app.use(cors())
 app.use(koaBody())
-// Routes 
+// Routes
 app.use(indexRoutes())
 	.use(allowedIndexMethods())
 	.use(publicApiRoutes())
