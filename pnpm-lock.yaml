@@ -35,6 +35,9 @@ importers:
       koa-body:
         specifier: ^7.0.1
         version: 7.0.1
+      koa-ratelimit:
+        specifier: ^6.0.0
+        version: 6.0.0
       mevn-orm:
         specifier: ^4.1.0
         version: 4.1.0(knex@3.2.9(mysql2@3.20.0(@types/node@25.5.2)))(mysql2@3.20.0(@types/node@25.5.2))
@@ -1006,6 +1009,10 @@ packages:
     resolution: {integrity: sha512-Izi8RQcffqCeNVgFigKli1ssklIbpHnCYc6AknXGYoB6grJqyeby7jv12JUQgmTAnIDnbck1uxksT4dzN3PWBA==}
     engines: {node: '>=12'}
 
+  async-ratelimiter@1.6.5:
+    resolution: {integrity: sha512-S7q3lpWZyo3E7VBIsOcASeKXlG86r+PtiwYViimDZ7AcHg+yDjMskDMRtVtzcPEDFEyBSs8EzJTy3JDl/KDdGg==}
+    engines: {node: '>= 8'}
+
   asynckit@0.4.0:
     resolution: {integrity: sha512-Oei9OH4tRh0YqU3GxhX79dM/mwVgvbZJaSNaRk+bshkj0S5cfHcgYakreBjrHwatXKbz+IoIdYLxrKim2MjW0Q==}
 
@@ -1599,6 +1606,10 @@ packages:
 
   koa-compose@4.1.0:
     resolution: {integrity: sha512-8ODW8TrDuMYvXRwra/Kh7/rJo9BtOfPc6qO8eAfC80CnCvSjSl0bkRM24X6/XBBEyj0v1nRUQ1LyOy3dbqOWXw==}
+
+  koa-ratelimit@6.0.0:
+    resolution: {integrity: sha512-UH1CXCF+yVhx5r5Fvx5eOKhc8sMHU/HhGBNCOaJ/SLO0+IcB6g5aKIE63eWsq7L3niwQWLfEbDtNGU3epKt0Hg==}
+    engines: {node: '>=18'}
 
   koa@3.2.0:
     resolution: {integrity: sha512-TrM4/tnNY7uJ1aW55sIIa+dqBvc4V14WRIAlGcWat9wV5pRS9Wr5Zk2ZTjQP1jtfIHDoHiSbPuV08P0fUZo2pg==}
@@ -3189,6 +3200,8 @@ snapshots:
 
   assertion-error@2.0.1: {}
 
+  async-ratelimiter@1.6.5: {}
+
   asynckit@0.4.0: {}
 
   aws-ssl-profiles@1.1.2: {}
@@ -3808,6 +3821,11 @@ snapshots:
       zod: 4.3.6
 
   koa-compose@4.1.0: {}
+
+  koa-ratelimit@6.0.0:
+    dependencies:
+      async-ratelimiter: 1.6.5
+      ms: 2.1.3
 
   koa@3.2.0:
     dependencies:

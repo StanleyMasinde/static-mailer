@@ -1,6 +1,10 @@
 import jsonwebtoken from 'jsonwebtoken'
 
-const secret: jsonwebtoken.Secret = process.env.JWT_SECRET || 'secret'
+const secret = process.env.JWT_SECRET
+
+if (!secret) {
+	throw new Error('JWT_SECRET is required.')
+}
 
 /**
  * Create a new JWT
