@@ -15,7 +15,7 @@
     "pretest": "tsc && node dist/scripts/migrateLatest.js",
     "test": "vitest",
     "build": "tsc",
-    "lint": "eslint src/"
+    "lint": "eslint src tests knexfile.ts"
   },
   "keywords": [
     "Static",

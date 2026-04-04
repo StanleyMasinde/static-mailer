@@ -8,7 +8,8 @@ info:
     JSON:API contract for `/v1/*` and `/api/v1/*`:
     - `Accept: application/vnd.api+json`
     - `Content-Type: application/vnd.api+json` for POST/PUT/PATCH
-    - Request bodies use JSON:API envelopes (`data.type` + `data.attributes`)
+    - Request bodies are flat JSON objects
+    - Responses use JSON:API documents
 servers:
   - url: https://localhost:3000
     description: Local development
@@ -48,15 +49,9 @@ paths:
         '404':
           description: Dashboard URL not configured
           content:
-            application/json:
+            application/vnd.api+json:
               schema:
-                type: object
-                required: [errors]
-                properties:
-                  errors:
-                    type: array
-                    items:
-                      $ref: '#/components/schemas/JsonApiError'
+                $ref: '#/components/schemas/JsonApiErrorDocument'
 
   /v1/register:
     post:
@@ -68,16 +63,13 @@ paths:
         content:
           application/vnd.api+json:
             schema:
-              $ref: '#/components/schemas/RegisterRequestDocument'
+              $ref: '#/components/schemas/RegisterRequestBody'
             examples:
               register:
                 value:
-                  data:
-                    type: users
-                    attributes:
-                      name: Jane Doe
-                      email: jane@example.com
-                      password: supersecretpassword
+                  name: Jane Doe
+                  email: jane@example.com
+                  password: supersecretpassword
       responses:
         '201':
           description: User created
@@ -130,15 +122,12 @@ paths:
         content:
           application/vnd.api+json:
             schema:
-              $ref: '#/components/schemas/LoginRequestDocument'
+              $ref: '#/components/schemas/LoginRequestBody'
             examples:
               login:
                 value:
-                  data:
-                    type: tokens
-                    attributes:
-                      email: jane@example.com
-                      password: supersecretpassword
+                  email: jane@example.com
+                  password: supersecretpassword
       responses:
         '200':
           description: Authenticated
@@ -182,14 +171,11 @@ paths:
         content:
           application/vnd.api+json:
             schema:
-              $ref: '#/components/schemas/RefreshTokenRequestDocument'
+              $ref: '#/components/schemas/RefreshTokenRequestBody'
             examples:
               refresh:
                 value:
-                  data:
-                    type: tokens
-                    attributes:
-                      refresh_token: <refresh-token>
+                  refresh_token: <refresh-token>
       responses:
         '200':
           description: Token pair rotated
@@ -261,14 +247,11 @@ paths:
         content:
           application/vnd.api+json:
             schema:
-              $ref: '#/components/schemas/PasswordResetRequestDocument'
+              $ref: '#/components/schemas/PasswordResetRequestBody'
             examples:
               request:
                 value:
-                  data:
-                    type: password_reset_requests
-                    attributes:
-                      email: jane@example.com
+                  email: jane@example.com
       responses:
         '200':
           description: Generic success response
@@ -309,16 +292,13 @@ paths:
         content:
           application/vnd.api+json:
             schema:
-              $ref: '#/components/schemas/PasswordUpdateRequestDocument'
+              $ref: '#/components/schemas/PasswordUpdateRequestBody'
             examples:
               update:
                 value:
-                  data:
-                    type: password_resets
-                    attributes:
-                      email: jane@example.com
-                      code: '123456'
-                      password: newstrongpassword
+                  email: jane@example.com
+                  code: '123456'
+                  password: newstrongpassword
       responses:
         '200':
           description: Password updated
@@ -370,9 +350,7 @@ paths:
         content:
           application/vnd.api+json:
             schema:
-              oneOf:
-                - $ref: '#/components/schemas/SocialAuthFlatRequest'
-                - $ref: '#/components/schemas/SocialAuthRequestDocument'
+              $ref: '#/components/schemas/SocialAuthRequestBody'
             examples:
               google:
                 value:
@@ -380,12 +358,6 @@ paths:
               github:
                 value:
                   token: <github-oauth-token>
-              jsonApiEnvelope:
-                value:
-                  data:
-                    type: social_auth
-                    attributes:
-                      token: <provider-token>
       responses:
         '200':
           description: Token issued for an existing linked user (or an existing user linked by email on first social login)
@@ -492,14 +464,11 @@ paths:
         content:
           application/vnd.api+json:
             schema:
-              $ref: '#/components/schemas/CreateApiKeyRequestDocument'
+              $ref: '#/components/schemas/CreateApiKeyRequestBody'
             examples:
               create:
                 value:
-                  data:
-                    type: api_keys
-                    attributes:
-                      name: portfolio-site
+                  name: portfolio-site
       responses:
         '201':
           description: API key created. `meta.raw_key` is shown once.
@@ -620,16 +589,13 @@ paths:
         content:
           application/vnd.api+json:
             schema:
-              $ref: '#/components/schemas/DeliverRequestDocument'
+              $ref: '#/components/schemas/DeliverRequestBody'
             examples:
               deliver:
                 value:
-                  data:
-                    type: deliveries
-                    attributes:
-                      subject: Hello
-                      email: visitor@example.com
-                      message: I would like to work with you.
+                  subject: Hello
+                  email: visitor@example.com
+                  message: I would like to work with you.
       responses:
         '202':
           description: Accepted for delivery
@@ -802,125 +768,29 @@ components:
         message:
           type: string
 
-    RegisterRequestDocument:
-      type: object
-      required: [data]
-      properties:
-        data:
-          type: object
-          required: [type, attributes]
-          properties:
-            type:
-              type: string
-              enum: [users]
-            attributes:
-              $ref: '#/components/schemas/RegisterAttributes'
+    RegisterRequestBody:
+      $ref: '#/components/schemas/RegisterAttributes'
 
-    LoginRequestDocument:
-      type: object
-      required: [data]
-      properties:
-        data:
-          type: object
-          required: [type, attributes]
-          properties:
-            type:
-              type: string
-              enum: [tokens]
-            attributes:
-              $ref: '#/components/schemas/LoginAttributes'
+    LoginRequestBody:
+      $ref: '#/components/schemas/LoginAttributes'
 
-    RefreshTokenRequestDocument:
-      type: object
-      required: [data]
-      properties:
-        data:
-          type: object
-          required: [type, attributes]
-          properties:
-            type:
-              type: string
-              enum: [tokens]
-            attributes:
-              $ref: '#/components/schemas/RefreshTokenAttributes'
+    RefreshTokenRequestBody:
+      $ref: '#/components/schemas/RefreshTokenAttributes'
 
-    PasswordResetRequestDocument:
-      type: object
-      required: [data]
-      properties:
-        data:
-          type: object
-          required: [type, attributes]
-          properties:
-            type:
-              type: string
-              enum: [password_reset_requests]
-            attributes:
-              $ref: '#/components/schemas/PasswordResetAttributes'
+    PasswordResetRequestBody:
+      $ref: '#/components/schemas/PasswordResetAttributes'
 
-    PasswordUpdateRequestDocument:
-      type: object
-      required: [data]
-      properties:
-        data:
-          type: object
-          required: [type, attributes]
-          properties:
-            type:
-              type: string
-              enum: [password_resets]
-            attributes:
-              $ref: '#/components/schemas/PasswordUpdateAttributes'
+    PasswordUpdateRequestBody:
+      $ref: '#/components/schemas/PasswordUpdateAttributes'
 
-    SocialAuthRequestDocument:
-      type: object
-      required: [data]
-      properties:
-        data:
-          type: object
-          required: [type, attributes]
-          properties:
-            type:
-              type: string
-              enum: [social_auth]
-            attributes:
-              $ref: '#/components/schemas/SocialAuthAttributes'
+    SocialAuthRequestBody:
+      $ref: '#/components/schemas/SocialAuthAttributes'
 
-    SocialAuthFlatRequest:
-      type: object
-      required: [token]
-      properties:
-        token:
-          type: string
-          description: Social provider token
+    CreateApiKeyRequestBody:
+      $ref: '#/components/schemas/CreateApiKeyAttributes'
 
-    CreateApiKeyRequestDocument:
-      type: object
-      required: [data]
-      properties:
-        data:
-          type: object
-          required: [type, attributes]
-          properties:
-            type:
-              type: string
-              enum: [api_keys]
-            attributes:
-              $ref: '#/components/schemas/CreateApiKeyAttributes'
-
-    DeliverRequestDocument:
-      type: object
-      required: [data]
-      properties:
-        data:
-          type: object
-          required: [type, attributes]
-          properties:
-            type:
-              type: string
-              enum: [deliveries]
-            attributes:
-              $ref: '#/components/schemas/DeliverAttributes'
+    DeliverRequestBody:
+      $ref: '#/components/schemas/DeliverAttributes'
 
     JsonApiDocument:
       type: object

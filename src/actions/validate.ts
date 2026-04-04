@@ -76,7 +76,7 @@ export const validate = (param: Record<string, string>) => {
 				if (!factory.validator(payload[key])) {
 					errors.push({
 						source: {
-							pointer: `/data/attributes/${key}`
+							pointer: `/${key}`
 						},
 						title: factory.title,
 						detail: factory.detail.replace('{field}', key),

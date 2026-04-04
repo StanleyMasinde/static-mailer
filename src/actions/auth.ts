@@ -79,7 +79,7 @@ export const register = async (ctx: Context) => {
 	if (userExists) {
 		setJsonApiError(ctx, 422, {
 			source: {
-				pointer: '/data/attributes/email'
+				pointer: '/email'
 			},
 			title: 'Invalid email',
 			detail: 'This email is already registered.'

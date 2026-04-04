@@ -112,7 +112,7 @@ function getSenderIdentity() {
  */
 export const fowardEmail = async (recipientEmail: string, subject: string, senderEmail: string, message: string, template: string = 'deliver') => {
 	const timestamp = new Date().toUTCString()
-	const { appUrl, companyUrl, dashboardUrl } = getTemplateContext()
+	const { appUrl, companyUrl } = getTemplateContext()
 	const templateData: Record<string, string | number | Date> = {
 		...getBaseTemplateData(),
 		email: senderEmail,

@@ -27,10 +27,6 @@ function isJsonApiRoute(path: string): boolean {
 		|| path.startsWith('/api/v1/')
 }
 
-function getMediaType(value: string): string {
-	return value.split(';', 1)[0].trim().toLowerCase()
-}
-
 function parseParameters(parts: string[]): Map<string, string> {
 	const params = new Map<string, string>()
 	for (const rawPart of parts) {

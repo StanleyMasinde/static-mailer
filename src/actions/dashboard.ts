@@ -1,4 +1,5 @@
 import { Context } from 'koa'
+import { setJsonApiError } from '../utils/http.js'
 
 function withQueryString(targetUrl: string, queryString: string): string {
 	if (!queryString) {
@@ -11,17 +12,11 @@ function withQueryString(targetUrl: string, queryString: string): string {
 export const dashboard = async (ctx: Context) => {
 	const dashboardUrl = process.env.DASHBOARD_URL
 	if (!dashboardUrl) {
-		ctx.status = 404
-		ctx.body = {
-			errors: [
-				{
-					status: 404,
-					code: 'not-found',
-					title: 'Not Found',
-					detail: 'Dashboard URL not configured. Set DASHBOARD_URL in environment.'
-				}
-			]
-		}
+		setJsonApiError(ctx, 404, {
+			code: 'not-found',
+			title: 'Not Found',
+			detail: 'Dashboard URL not configured. Set DASHBOARD_URL in environment.'
+		})
 		return
 	}
 

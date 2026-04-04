@@ -6,7 +6,7 @@ Send email from static websites through an authenticated API key workflow.
 - Per-user API key management.
 - Public delivery endpoint guarded by API key and rate limiting.
 - Email submission logging (`delivery_status`, `sender_ip`, timestamps).
-- JSON:API-style responses for `/v1/*` and `/api/v1/*` routes.
+- JSON:API media type for `/v1/*` and `/api/v1/*` routes, with JSON:API-formatted responses.
 
 ## Requirements
 - Node.js (current LTS)
@@ -84,6 +84,8 @@ Use `.env.example` as the canonical template.
 For `/v1/*` and `/api/v1/*` endpoints:
 - Set `Accept: application/vnd.api+json`.
 - For `POST`, `PUT`, `PATCH`, set `Content-Type: application/vnd.api+json`.
+- Send request bodies as flat JSON objects such as `{ "email": "jane@example.com", "password": "..." }`.
+- Do not wrap request bodies in JSON:API `data.attributes` envelopes.
 
 If these are wrong, the API returns:
 - `406 Not Acceptable` for unsupported `Accept`.
@@ -109,6 +111,7 @@ If these are wrong, the API returns:
 - OpenAPI 3.x specification: `openapi.yaml`
 - Served by API at: `GET /openapi.yaml`
 - Interactive docs UI (Swagger-style): `GET /docs`
+- `/docs` loads Swagger UI assets from JSDelivr at runtime.
 
 ## Social auth flow
 Endpoints:

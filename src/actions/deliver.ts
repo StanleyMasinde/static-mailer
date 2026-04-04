@@ -39,7 +39,7 @@ export const deliverEmail = async (ctx: Context): Promise<void> => {
 					.where('uuid', keyInDB.uuid)
 					.update({ last_used_at: new Date() })
 				sendSuccessResponse(ctx)
-			} catch (error) {
+			} catch {
 				await database<EmailSubmissionTable>('email_submissions').insert({
 					key_uuid: keyInDB.uuid,
 					subject: body.subject,
