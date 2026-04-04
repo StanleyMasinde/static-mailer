@@ -32,7 +32,7 @@ pnpm start
 ```
 
 ### Environment variables
-- `APP_PORT`, `APP_URL`
+- `APP_PORT`, `APP_URL`, `DASHBOARD_URL`, `COMPANY_NAME`, `COMPANY_URL`
 - `JWT_SECRET`
 - `DATABASE_CLIENT`, `DATABASE_HOST`, `DATABASE_USER`, `DATABASE_PASSWORD`, `DATABASE_SCHEMA`
 - `MAILER_HOST`, `MAILER_PORT`, `MAILER_USERNAME`, `MAILER_PASSWORD`, `MAILER_SECURE`
@@ -41,6 +41,7 @@ pnpm start
 
 ### Key endpoints
 - `GET /ping`
+- `GET /dashboard` (logs analytics metadata and redirects to `DASHBOARD_URL`)
 - `POST /v1/register`
 - `POST /v1/login`
 - `GET /v1/me`
