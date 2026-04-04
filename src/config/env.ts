@@ -48,6 +48,27 @@ export function validateEnvironment(): void {
 		issues.push('MAILER_PORT must be a valid TCP port (1-65535).')
 	}
 
+	const mailerSecure = env('MAILER_SECURE')
+	if (mailerSecure && !['true', 'false'].includes(mailerSecure)) {
+		issues.push('MAILER_SECURE must be either "true" or "false".')
+	}
+
+	const mailerRequireTls = env('MAILER_REQUIRE_TLS')
+	if (mailerRequireTls && !['true', 'false'].includes(mailerRequireTls)) {
+		issues.push('MAILER_REQUIRE_TLS must be either "true" or "false".')
+	}
+
+	const mailerUsername = env('MAILER_USERNAME')
+	const mailerPassword = env('MAILER_PASSWORD')
+	if ((mailerUsername && !mailerPassword) || (!mailerUsername && mailerPassword)) {
+		issues.push('MAILER_USERNAME and MAILER_PASSWORD must either both be set or both be empty.')
+	}
+
+	const mailerFromEmail = env('MAILER_FROM_EMAIL')
+	if (mailerFromEmail && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(mailerFromEmail)) {
+		issues.push('MAILER_FROM_EMAIL must be a valid email address.')
+	}
+
 	const appPort = env('APP_PORT')
 	if (appPort) {
 		const parsedAppPort = Number.parseInt(appPort, 10)

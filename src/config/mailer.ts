@@ -1,5 +1,6 @@
 import { readFileSync } from 'fs'
 import nodemailer from 'nodemailer'
+import SMTPTransport from 'nodemailer/lib/smtp-transport/index.js'
 import { renderFile } from 'pug'
 import { EmailOptions } from '../types.js'
 
@@ -7,9 +8,12 @@ import { EmailOptions } from '../types.js'
 const {
 	MAILER_PORT = '1025',
 	MAILER_SECURE = 'false',
+	MAILER_REQUIRE_TLS = 'false',
 	MAILER_HOST = 'localhost',
 	MAILER_USERNAME,
 	MAILER_PASSWORD,
+	MAILER_FROM_NAME = 'Static Mailer',
+	MAILER_FROM_EMAIL = 'no-reply@staticmailer.com',
 	COMPANY_NAME = 'Static Mailer',
 	COMPANY_URL,
 	DASHBOARD_URL,
@@ -74,15 +78,28 @@ function substituteTemplateTokens(templateText: string, data: Record<string, str
 	return substitutedText
 }
 
-const transport = nodemailer.createTransport({
+const transportConfig: SMTPTransport.Options = {
 	host: MAILER_HOST,
-	port: parseInt(MAILER_PORT),
+	port: Number.parseInt(MAILER_PORT, 10),
 	secure: MAILER_SECURE === 'true',
-	auth: {
+	requireTLS: MAILER_REQUIRE_TLS === 'true',
+}
+
+if (MAILER_USERNAME && MAILER_PASSWORD) {
+	transportConfig.auth = {
 		user: MAILER_USERNAME,
 		pass: MAILER_PASSWORD,
-	},
-})
+	}
+}
+
+const transport = nodemailer.createTransport(transportConfig)
+
+function getSenderIdentity() {
+	return {
+		name: MAILER_FROM_NAME,
+		address: MAILER_FROM_EMAIL
+	}
+}
 
 /**
  * Deliver a given email to the intended user
@@ -117,10 +134,7 @@ export const fowardEmail = async (recipientEmail: string, subject: string, sende
 			companyUrl
 		}),
 		to: recipientEmail,
-		from: {
-			name: 'Static Mailer',
-			address: 'no-reply@staticmailer.com'
-		}
+		from: getSenderIdentity()
 	})
 	return true
 }
@@ -149,10 +163,7 @@ export const sendMail = async (mailOptions: EmailOptions) => {
 				companyName: COMPANY_NAME,
 				companyUrl
 			}),
-		to: mailOptions.receipient,
-		from: {
-			name: 'Static Mailer',
-			address: 'no-reply@staticmailer.com'
-		}
-	})
+			to: mailOptions.receipient,
+			from: getSenderIdentity()
+		})
 }

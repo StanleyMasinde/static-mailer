@@ -13,7 +13,7 @@ function email(value: unknown): boolean {
 	if (typeof value !== 'string') {
 		return false
 	}
-	const rgx = new RegExp(/[^@ \t\r\n]+@[^@ \t\r\n]+\.[^@ \t\r\n]+/)
+	const rgx = new RegExp(/^[^@ \t\r\n]+@[^@ \t\r\n]+\.[^@ \t\r\n]+$/)
 	return rgx.test(value)
 }
 
