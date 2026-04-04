@@ -73,6 +73,12 @@ export interface GoogleJWTPayload {
     exp: number
 }
 
+export interface GitHubAuthPayload {
+	sub: string
+	email: string
+	name: string
+}
+
 export interface EmailSubmissionTable {
     id?: number
     key_uuid?: string
@@ -110,7 +116,7 @@ export interface RefreshTokenTable {
 export interface SocialAccountTable {
     id?: number,
     user_id: number,
-    provider: 'google',
+    provider: 'google' | 'github',
     provider_user_id: string,
     provider_email: string,
     created_at?: Date,

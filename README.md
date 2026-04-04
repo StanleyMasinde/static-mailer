@@ -2,7 +2,7 @@
 Send email from static websites through an authenticated API key workflow.
 
 ## Features
-- User auth (`register`, `login`, `me`, password reset, Google social auth).
+- User auth (`register`, `login`, `me`, password reset, Google/GitHub social auth).
 - Per-user API key management.
 - Public delivery endpoint guarded by API key and rate limiting.
 - Email submission logging (`delivery_status`, `sender_ip`, timestamps).
@@ -99,6 +99,7 @@ If these are wrong, the API returns:
 - `POST /v1/password-reset`
 - `POST /v1/password-update`
 - `POST /v1/social-auth/google`
+- `POST /v1/social-auth/github`
 - `POST /v1/apiKeys`
 - `GET /v1/apiKeys`
 - `DELETE /v1/apiKeys/:uuid`
@@ -109,9 +110,10 @@ If these are wrong, the API returns:
 - Served by API at: `GET /openapi.yaml`
 - Interactive docs UI (Swagger-style): `GET /docs`
 
-## Google auth flow
-Endpoint:
+## Social auth flow
+Endpoints:
 - `POST /v1/social-auth/google`
+- `POST /v1/social-auth/github`
 - Headers:
   - `Accept: application/vnd.api+json`
   - `Content-Type: application/vnd.api+json`
@@ -119,27 +121,28 @@ Endpoint:
 
 ```json
 {
-  "token": "<google-id-token>"
+  "token": "<provider-token>"
 }
 ```
 
 Behavior:
-1. Route dispatches through `POST /v1/social-auth/:provider`; only `google` is supported.
+1. Route dispatches through `POST /v1/social-auth/:provider`; supported providers are `google` and `github`.
 2. Server reads token from a raw string body or from `{ "token": "..." }`.
-3. `GOOGLE_CLIENT_ID` must be configured or the endpoint returns `500`.
-4. Token is verified against Google JWKS (`https://www.googleapis.com/oauth2/v3/certs`) with cached keys and JWT checks:
+3. Google tokens: `GOOGLE_CLIENT_ID` must be configured or the endpoint returns `500`.
+4. Google token verification uses Google JWKS (`https://www.googleapis.com/oauth2/v3/certs`) with cached keys and JWT checks:
    - `alg=RS256`, known `kid`
    - valid RSA signature, plus required Google `sub` claim
    - valid claims (`iss`, `aud`, `exp`, `iat`, `email`, `email_verified=true`)
-5. If verification fails, returns `400 Invalid token`.
-6. Server looks up `social_accounts` by (`provider=google`, `provider_user_id=sub`):
+5. GitHub token verification uses GitHub API (`/user`, `/user/emails`) and requires a valid user id plus a verified email.
+6. If verification fails, returns `400 Invalid token`.
+7. Server looks up `social_accounts` by (`provider`, `provider_user_id=sub`):
    - if found, it signs in that linked user (`200`).
-7. If no provider link exists:
+8. If no provider link exists:
    - if a local user exists with the same email, it creates a provider link and signs in (`200`);
    - otherwise it creates a new user, creates provider link, signs in (`201`), and sends welcome email.
 
 Common error responses:
-- `400 Invalid provider` (anything except `google`)
+- `400 Invalid provider` (anything except `google` or `github`)
 - `400 Missing token`
 - `400 Invalid token`
 - `500 Server configuration error` (`GOOGLE_CLIENT_ID` missing)

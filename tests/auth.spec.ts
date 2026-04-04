@@ -6,6 +6,7 @@ import { database } from '../src/config/database'
 import { afterAll, beforeEach, describe, expect, it, vi } from 'vitest'
 import * as mailer from '../src/config/mailer'
 import * as googleAuth from '../src/config/googleAuth'
+import * as githubAuth from '../src/config/githubAuth'
 import { createHash } from '../src/config/hash'
 
 const application = request(app.callback())
@@ -397,6 +398,81 @@ describe('Authentication tests', () => {
 		const socialRows = await database('social_accounts')
 			.where({
 				provider: 'google',
+				provider_user_id: providerUserId,
+				user_id: userId
+			})
+		expect(socialRows.length).toBe(1)
+		expect(socialRows[0].provider_email).toBe(updatedProviderEmail)
+	})
+
+	it('Social auth rejects invalid GitHub tokens', async () => {
+		vi.spyOn(githubAuth, 'verifyGitHubAccessToken').mockRejectedValue(new Error('Invalid token'))
+		const response = await withJsonApiHeaders(
+			application.post('/v1/social-auth/github')
+		)
+			.send({ token: 'bad-token' })
+		expect(response.status).toBe(400)
+	})
+
+	it('Social auth issues a token for valid GitHub payloads', async () => {
+		vi.spyOn(mailer, 'sendMail').mockResolvedValue(undefined)
+		vi.spyOn(githubAuth, 'verifyGitHubAccessToken').mockResolvedValue({
+			sub: faker.string.numeric(8),
+			email: faker.internet.email(),
+			name: faker.person.fullName()
+		})
+
+		const response = await withJsonApiHeaders(
+			application.post('/v1/social-auth/github')
+		)
+			.send({ token: 'valid-token' })
+		expect(response.status).toBe(201)
+		expect(response.body.data.attributes).toHaveProperty('token')
+		expect(response.body.data.attributes).toHaveProperty('refresh_token')
+	})
+
+	it('GitHub social auth links existing users and reuses provider identity', async () => {
+		const providerUserId = faker.string.numeric(8)
+		const updatedProviderEmail = faker.internet.email()
+		vi.spyOn(githubAuth, 'verifyGitHubAccessToken')
+			.mockResolvedValueOnce({
+				sub: providerUserId,
+				email: user.email,
+				name: user.name
+			})
+			.mockResolvedValueOnce({
+				sub: providerUserId,
+				email: updatedProviderEmail,
+				name: faker.person.fullName()
+			})
+
+		const firstResponse = await withJsonApiHeaders(
+			application.post('/v1/social-auth/github')
+		)
+			.send({ token: 'provider-token-1' })
+		expect(firstResponse.status).toBe(200)
+		expect(Number(firstResponse.body.data.id)).toBe(userId)
+
+		const linkedAccount = await database('social_accounts')
+			.where({
+				provider: 'github',
+				provider_user_id: providerUserId,
+				user_id: userId
+			})
+			.first()
+		expect(linkedAccount).toBeTruthy()
+		expect(linkedAccount.provider_email).toBe(user.email)
+
+		const secondResponse = await withJsonApiHeaders(
+			application.post('/v1/social-auth/github')
+		)
+			.send({ token: 'provider-token-2' })
+		expect(secondResponse.status).toBe(200)
+		expect(Number(secondResponse.body.data.id)).toBe(userId)
+
+		const socialRows = await database('social_accounts')
+			.where({
+				provider: 'github',
 				provider_user_id: providerUserId,
 				user_id: userId
 			})

@@ -346,12 +346,12 @@ paths:
       tags: [Auth]
       summary: Social auth login
       description: |
-        Exchanges a Google ID token for a StaticMailer access token and refresh token.
+        Exchanges a Google ID token or GitHub OAuth access token for a StaticMailer access token and refresh token.
 
         Flow:
-        1. Send `POST /v1/social-auth/google` with a Google ID token.
-        2. Server verifies token signature and claims against Google JWKS, including `sub`.
-        3. Server checks provider linkage in `social_accounts` using (`provider=google`, `provider_user_id=sub`).
+        1. Send `POST /v1/social-auth/google` with a Google ID token, or `POST /v1/social-auth/github` with a GitHub OAuth token.
+        2. Server verifies token claims and resolves provider identity (`sub`) and verified email.
+        3. Server checks provider linkage in `social_accounts` using (`provider`, `provider_user_id=sub`).
         4. If link exists, signs in linked user and returns `200`.
         5. If link does not exist:
            - if a local user exists by email, server creates link and returns `200`;
@@ -364,7 +364,7 @@ paths:
           required: true
           schema:
             type: string
-            enum: [google]
+            enum: [google, github]
       requestBody:
         required: true
         content:
@@ -377,12 +377,15 @@ paths:
               google:
                 value:
                   token: <google-id-token>
+              github:
+                value:
+                  token: <github-oauth-token>
               jsonApiEnvelope:
                 value:
                   data:
                     type: social_auth
                     attributes:
-                      token: <google-id-token>
+                      token: <provider-token>
       responses:
         '200':
           description: Token issued for an existing linked user (or an existing user linked by email on first social login)
@@ -442,7 +445,7 @@ paths:
                     errors:
                       - status: '400'
                         title: Invalid provider
-                        detail: The provider is not supported. The only supported provider is Google.
+                        detail: The provider is not supported. Supported providers are Google and GitHub.
                 missingToken:
                   value:
                     jsonapi:
@@ -462,7 +465,7 @@ paths:
         '406': { $ref: '#/components/responses/JsonApiNotAcceptable' }
         '415': { $ref: '#/components/responses/JsonApiUnsupportedMediaType' }
         '500':
-          description: Google auth not configured
+          description: Google auth not configured (applies to the Google provider only)
           content:
             application/vnd.api+json:
               schema:
@@ -778,7 +781,7 @@ components:
       properties:
         token:
           type: string
-          description: Google ID token (must validate for configured GOOGLE_CLIENT_ID and include a valid `sub` and verified email)
+          description: Social provider token. Use a Google ID token for `google` or a GitHub OAuth token for `github`.
 
     CreateApiKeyAttributes:
       type: object
@@ -889,7 +892,7 @@ components:
       properties:
         token:
           type: string
-          description: Google ID token
+          description: Social provider token
 
     CreateApiKeyRequestDocument:
       type: object
