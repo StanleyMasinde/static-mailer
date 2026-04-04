@@ -60,4 +60,58 @@ describe('General route tests', () => {
 		expect(response.headers['content-type']).toContain('application/vnd.api+json')
 		await database.destroy()
 	})
+
+	test('Test 406 when JSON:API in Accept has q=0', async () => {
+		const response = await request(application)
+			.post('/v1/register')
+			.set('Accept', 'application/vnd.api+json;q=0')
+			.set('Content-Type', 'application/vnd.api+json')
+			.send({
+				name: 'Test User',
+				email: 'user@example.com',
+				password: 'secret'
+			})
+
+		expect(response.status).toEqual(406)
+		expect(response.body).toHaveProperty('errors')
+		expect(response.body.errors[0].status).toBe('406')
+		expect(response.headers['content-type']).toContain('application/vnd.api+json')
+		await database.destroy()
+	})
+
+	test('Test 415 when JSON:API Content-Type has unsupported parameter', async () => {
+		const response = await request(application)
+			.post('/v1/register')
+			.set('Accept', 'application/vnd.api+json')
+			.set('Content-Type', 'application/vnd.api+json; charset=utf-8')
+			.send({
+				name: 'Test User',
+				email: 'user@example.com',
+				password: 'secret'
+			})
+
+		expect(response.status).toEqual(415)
+		expect(response.body).toHaveProperty('errors')
+		expect(response.body.errors[0].status).toBe('415')
+		expect(response.headers['content-type']).toContain('application/vnd.api+json')
+		await database.destroy()
+	})
+
+	test('Test 405 includes Allow header', async () => {
+		const response = await request(application)
+			.put('/v1/login')
+			.set('Accept', 'application/vnd.api+json')
+			.set('Content-Type', 'application/vnd.api+json')
+			.send({
+				email: 'user@example.com',
+				password: 'secret'
+			})
+
+		expect(response.status).toEqual(405)
+		expect(response.headers).toHaveProperty('allow')
+		expect(response.headers.allow).toContain('POST')
+		expect(response.body).toHaveProperty('errors')
+		expect(response.headers['content-type']).toContain('application/vnd.api+json')
+		await database.destroy()
+	})
 })
