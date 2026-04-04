@@ -1,23 +1,30 @@
 import { Context, Next } from 'koa'
 import { ValidationMessage, ValidationRuleFactory } from '../types.js'
 
-function required(value: string | number): boolean {
-	return value !== null && value !== undefined && value.toString().length > 0
+function required(value: unknown): boolean {
+	if (value === null || value === undefined) {
+		return false
+	}
+	return value.toString().length > 0
 }
 
-function email(value: string | number): boolean {
+function email(value: unknown): boolean {
+	if (typeof value !== 'string') {
+		return false
+	}
 	const rgx = new RegExp(/[^@ \t\r\n]+@[^@ \t\r\n]+\.[^@ \t\r\n]+/)
-	const input = value as string
-	return rgx.test(input)
+	return rgx.test(value)
 }
 
-function phone(value: string | number): boolean {
+function phone(value: unknown): boolean {
+	if (typeof value !== 'string') {
+		return false
+	}
 	const rgx = new RegExp(/^\+[1-9]\d{1,14}$/)
-	const input = value as string
-	return rgx.test(input)
+	return rgx.test(value)
 }
 
-function array(value: string | number): boolean {
+function array(value: unknown): boolean {
 	return Array.isArray(value)
 }
 
@@ -49,7 +56,7 @@ export const validate = (param: Record<string, string>) => {
 		const errors: Array<ValidationMessage> = []
 		const body = ctx.request.body
 
-		if (!body) {
+		if (!body || typeof body !== 'object' || Array.isArray(body)) {
 			ctx.set('Content-Type', 'application/vnd.api+json')
 			ctx.status = 400
 			ctx.body = {
@@ -63,6 +70,7 @@ export const validate = (param: Record<string, string>) => {
 			}
 			return
 		}
+		const payload = body as Record<string, unknown>
 
 		for (const key in param) {
 			const rules: Array<string> = param[key].split('|')
@@ -71,7 +79,7 @@ export const validate = (param: Record<string, string>) => {
 				if (!factory) {
 					ctx.throw(500, `Rule ${rule} not found`)
 				}
-				if (!factory.validator(body[key])) {
+				if (!factory.validator(payload[key])) {
 					errors.push({
 						source: `/data/attributes/${key}`,
 						title: factory.title,

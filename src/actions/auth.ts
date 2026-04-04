@@ -12,7 +12,11 @@ import { JwtPayload, decode } from 'jsonwebtoken'
  * @param ctx Koa context
  */
 export const register = async (ctx: Context) => {
-	const requestBody = ctx.request.body as RegisterRequest
+	const body = ctx.request.body
+	if (!body || typeof body !== 'object' || Array.isArray(body)) {
+		ctx.throw(400, 'Invalid request body')
+	}
+	const requestBody = body as unknown as RegisterRequest
 	const password = await createHash(requestBody.password)
 
 	const userExists = await database<UserTable>('users').where('email', requestBody.email).first()
@@ -67,7 +71,11 @@ export const register = async (ctx: Context) => {
  * @param ctx Koa context
  */
 export const login = async (ctx: Context) => {
-	const requestBody = ctx.request.body as LoginRequest
+	const body = ctx.request.body
+	if (!body || typeof body !== 'object' || Array.isArray(body)) {
+		ctx.throw(400, 'Invalid request body')
+	}
+	const requestBody = body as unknown as LoginRequest
 	const user = await database<UserTable>('users').where('email', requestBody.email).first()
 	// The user exists we now check if the password matches
 	if (user) {
@@ -169,7 +177,11 @@ export const authorize = async (ctx: Context, next: Next) => {
  */
 export const sendPasswordResetInstructions = async (ctx: Context) => {
 	try {
-		const email = ctx.request.body.email
+		const body = ctx.request.body
+		if (!body || typeof body !== 'object' || Array.isArray(body) || typeof (body as Record<string, unknown>).email !== 'string') {
+			ctx.throw(400, 'Invalid request body')
+		}
+		const email = (body as { email: string }).email
 		const user = await database<UserTable>('users').where({ email }).first()
 		if (user) {
 			const code = randomInt(99999, 1000000).toString()
@@ -207,7 +219,11 @@ export const sendPasswordResetInstructions = async (ctx: Context) => {
  */
 export const changeUserPassword = async (ctx: Context) => {
 	try {
-		const requestBody = ctx.request.body as ChangePasswordRequest
+		const body = ctx.request.body
+		if (!body || typeof body !== 'object' || Array.isArray(body)) {
+			ctx.throw(400, 'Invalid request body')
+		}
+		const requestBody = body as unknown as ChangePasswordRequest
 		const user = await database<UserTable>('users')
 			.where('email', requestBody.email)
 			.first()
@@ -287,13 +303,22 @@ export const socialAuth = async (ctx: Context) => {
 	}
 
 	async function handleGoogleAuth() {
-		const token = ctx.request.body
+		const body = ctx.request.body
+		const token = typeof body === 'string'
+			? body
+			: body && typeof body === 'object' && !Array.isArray(body) && typeof (body as Record<string, unknown>).token === 'string'
+				? (body as { token: string }).token
+				: null
 		console.log(token)
 		if (!token) {
 			return missingTokenError()
 		}
 
-		const userInfo = decode(token) as GoogleJWTPayload
+		const decodedToken = decode(token)
+		if (!decodedToken || typeof decodedToken === 'string') {
+			return invalidTokenError()
+		}
+		const userInfo = decodedToken as unknown as GoogleJWTPayload
 		const email = userInfo.email
 		const userInDb = await database<UserTable>('users').where('email', email).first()
 
@@ -362,6 +387,19 @@ export const socialAuth = async (ctx: Context) => {
 					status: 400,
 					title: 'Invalid provider',
 					detail: 'The provider is not supported. The supported provider is Google'
+				}
+			]
+		}
+	}
+
+	function invalidTokenError() {
+		ctx.status = 400
+		return ctx.body = {
+			errors: [
+				{
+					status: 400,
+					title: 'Invalid token',
+					detail: 'The provided token is invalid.'
 				}
 			]
 		}

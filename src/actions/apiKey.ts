@@ -12,12 +12,16 @@ import { JwtPayload } from 'jsonwebtoken'
 export const createApiKey = async (ctx: Context) => {
 	try {
 		const { body } = ctx.request
+		if (!body || typeof body !== 'object' || Array.isArray(body) || typeof (body as Record<string, unknown>).name !== 'string') {
+			ctx.throw(400, 'Invalid request body')
+		}
+		const requestBody = body as { name: string }
 		const uuid = uuidv4()
 		const key = randomBytes(16).toString('base64url')
 
 		await database<ApiKeyTable>('api_keys').insert({
 			uuid,
-			name: body.name,
+			name: requestBody.name,
 			key,
 			user_id: ctx.state.user.sub
 		})
