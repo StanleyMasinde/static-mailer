@@ -13,7 +13,7 @@ jobs:
       - name: Use Node.js
         uses: actions/setup-node@v3
         with:
-          node-version: 23.x
+          node-version: 22.x
       - name: Start Mailpit
         uses: StanleyMasinde/mailpit-action@v0.1.0
       - name: Setup MySQL database
@@ -28,7 +28,12 @@ jobs:
         run: cp .env.example .env
       - name: Install deps
         run: pnpm i
-      #- name: Lint 🧐
-      # run: pnpm run lint
+      - name: Lint 🧐
+        run: |
+          if [ -f eslint.config.js ] || [ -f .eslintrc ] || [ -f .eslintrc.js ] || [ -f .eslintrc.cjs ] || [ -f .eslintrc.json ]; then
+            pnpm run lint
+          else
+            echo "No ESLint config found, skipping lint."
+          fi
       - name: Test 🧪
-        run: npm test
+        run: pnpm test
