@@ -15,4 +15,4 @@ router.post('/api/v1/deliver/:apiKey',
 	deliverEmail)
 
 export const publicApiRoutes = () => router.routes()
-export const allowedPublicApiMethods = () => router.allowedMethods()
+export const allowedPublicApiMethods = () => router.allowedMethods({ throw: true })

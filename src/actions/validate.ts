@@ -59,8 +59,7 @@ export const validate = (param: Record<string, string>) => {
 
 		if (!body || typeof body !== 'object' || Array.isArray(body)) {
 			setJsonApiError(ctx, 400, {
-				status: 400,
-				title: 'Bad request',
+				title: 'Bad Request',
 				detail: 'Request body is missing.'
 			})
 			return
@@ -76,9 +75,11 @@ export const validate = (param: Record<string, string>) => {
 				}
 				if (!factory.validator(payload[key])) {
 					errors.push({
-						source: `/data/attributes/${key}`,
+						source: {
+							pointer: `/data/attributes/${key}`
+						},
 						title: factory.title,
-						message: factory.detail.replace('{field}', key),
+						detail: factory.detail.replace('{field}', key),
 					})
 				}
 			}

@@ -7,115 +7,139 @@ import { afterAll, beforeEach, describe, expect, it, vi } from 'vitest'
 import * as mailer from '../src/config/mailer'
 import * as googleAuth from '../src/config/googleAuth'
 import { createHash } from '../src/config/hash'
+
 const application = request(app.callback())
+const JSON_API_MEDIA_TYPE = 'application/vnd.api+json'
 
 const user = {
 	name: faker.person.fullName(),
 	email: faker.internet.email(),
 	password: faker.internet.password()
-};
+}
 
 let token = ''
 let userId: number
 let keyUuid = ''
 
+function withJsonApiHeaders(req: request.Test): request.Test {
+	return req
+		.set('Accept', JSON_API_MEDIA_TYPE)
+		.set('Content-Type', JSON_API_MEDIA_TYPE)
+}
+
 describe('Authentication tests', () => {
 	afterAll(async () => {
-		await database.destroy();
-	});
+		await database.destroy()
+	})
 
 	beforeEach(() => {
 		vi.restoreAllMocks()
-	});
+	})
 
 	it('Throw a 400 when the request body is missing', async () => {
-		const response = await application.post('/v1/register');
-		expect(response.status).toBe(400);
-	});
+		const response = await application
+			.post('/v1/register')
+			.set('Accept', JSON_API_MEDIA_TYPE)
+		expect(response.status).toBe(400)
+	})
 
 	it('User registration succeeds with valid data', async () => {
-		const response = await application
-			.post('/v1/register')
-			.send(user);
+		const response = await withJsonApiHeaders(
+			application.post('/v1/register')
+		)
+			.send(user)
 
-		expect(response.status).toBe(200);
-		expect(response.body).toHaveProperty('token');
-		expect(response.body.user.email).toBe(user.email);
-	});
+		expect(response.status).toBe(201)
+		expect(response.body.meta).toHaveProperty('token')
+		expect(response.body.data.attributes.email).toBe(user.email)
+	})
 
 	it('User registration fails when email exists', async () => {
-		const response = await application
-			.post('/v1/register')
-			.send(user);
+		const response = await withJsonApiHeaders(
+			application.post('/v1/register')
+		)
+			.send(user)
 
-		expect(response.status).toBe(422);
-		expect(response.body).toHaveProperty('errors');
-		expect(response.body.errors[0].message).toBe('This email is already registered');
-	});
+		expect(response.status).toBe(422)
+		expect(response.body).toHaveProperty('errors')
+		expect(response.body.errors[0].detail).toBe('This email is already registered.')
+	})
 
 	it('User registration fails without request body', async () => {
-		const response = await application.post('/v1/register');
-		expect(response.status).toBe(400);
-	});
-
-	it('User registration fails with invalid data', async () => {
 		const response = await application
 			.post('/v1/register')
+			.set('Accept', JSON_API_MEDIA_TYPE)
+		expect(response.status).toBe(400)
+	})
+
+	it('User registration fails with invalid data', async () => {
+		const response = await withJsonApiHeaders(
+			application.post('/v1/register')
+		)
 			.send({
 				email: 'foo'
-			});
+			})
 
-		expect(response.status).toBe(422);
-	});
+		expect(response.status).toBe(422)
+	})
 
 	it('User can login with valid credentials', async () => {
-		const response = await application
-			.post('/v1/login')
+		const response = await withJsonApiHeaders(
+			application.post('/v1/login')
+		)
 			.send({
 				email: user.email,
 				password: user.password
-			});
+			})
 
-		expect(response.status).toBe(200);
-		expect(response.body).toHaveProperty('token');
-		token = response.body.token
-	});
+		expect(response.status).toBe(200)
+		expect(response.body.data.attributes).toHaveProperty('token')
+		token = response.body.data.attributes.token
+	})
 
 	it('User login fails without request body', async () => {
-		const response = await application.post('/v1/login');
-		expect(response.status).toBe(400);
-	});
-
-	it('User login fails with incorrect credentials', async () => {
 		const response = await application
 			.post('/v1/login')
+			.set('Accept', JSON_API_MEDIA_TYPE)
+		expect(response.status).toBe(400)
+	})
+
+	it('User login fails with incorrect credentials', async () => {
+		const response = await withJsonApiHeaders(
+			application.post('/v1/login')
+		)
 			.send({
 				email: 'foo@bar.com',
 				password: 'wrong password'
-			});
+			})
 
-		expect(response.status).toBe(401);
-	});
+		expect(response.status).toBe(401)
+	})
 
 	it('Get the current user', async () => {
 		const response = await application
 			.get('/v1/me')
+			.set('Accept', JSON_API_MEDIA_TYPE)
 			.set('Authorization', `Bearer ${token}`)
 
-		expect(response.body).toHaveProperty('user')
-		userId = response.body.user.id
+		expect(response.body).toHaveProperty('data')
+		expect(response.body.data.type).toBe('users')
+		userId = Number(response.body.data.id)
 	})
 
 	it('Get user API KEYS', async () => {
-		const createResponse = await application
-			.post('/v1/apiKeys')
-			.set('Authorization', `Bearer ${token}`)
+		const createResponse = await withJsonApiHeaders(
+			application
+				.post('/v1/apiKeys')
+				.set('Authorization', `Bearer ${token}`)
+		)
 			.send({ name: faker.lorem.word() })
-		expect(createResponse.status).toBe(200)
-		keyUuid = createResponse.body.apiKey.uuid
+		expect(createResponse.status).toBe(201)
+		keyUuid = createResponse.body.data.id
 
 		const response = await application
 			.get('/v1/apiKeys')
+			.set('Accept', JSON_API_MEDIA_TYPE)
 			.set('Authorization', `Bearer ${token}`)
 
 		expect(response.body.data.length).toBe(1)
@@ -126,14 +150,17 @@ describe('Authentication tests', () => {
 	it('Delete an API KEY', async () => {
 		const response = await application
 			.delete(`/v1/apiKeys/${keyUuid}`)
+			.set('Accept', JSON_API_MEDIA_TYPE)
 			.set('Authorization', `Bearer ${token}`)
-		expect(response.status).toBe(200)
-		expect(response.body.data).toBe('Key deleted.')
+		expect(response.status).toBe(204)
 	})
 
 	it('Reject API key listing without authorization', async () => {
-		const response = await application.get('/v1/apiKeys')
-		expect(response.status).toBe(403)
+		const response = await application
+			.get('/v1/apiKeys')
+			.set('Accept', JSON_API_MEDIA_TYPE)
+		expect(response.status).toBe(401)
+		expect(response.headers['www-authenticate']).toBe('Bearer')
 	})
 
 	it('Reject deleting another user API key', async () => {
@@ -142,38 +169,44 @@ describe('Authentication tests', () => {
 			email: faker.internet.email(),
 			password: faker.internet.password()
 		}
-		const registerResponse = await application
-			.post('/v1/register')
+		const registerResponse = await withJsonApiHeaders(
+			application.post('/v1/register')
+		)
 			.send(secondUser)
-		expect(registerResponse.status).toBe(200)
+		expect(registerResponse.status).toBe(201)
 
-		const createKeyResponse = await application
-			.post('/v1/apiKeys')
-			.set('Authorization', `Bearer ${registerResponse.body.token}`)
+		const createKeyResponse = await withJsonApiHeaders(
+			application
+				.post('/v1/apiKeys')
+				.set('Authorization', `Bearer ${registerResponse.body.meta.token}`)
+		)
 			.send({ name: faker.lorem.word() })
-		expect(createKeyResponse.status).toBe(200)
+		expect(createKeyResponse.status).toBe(201)
 
 		const deleteResponse = await application
-			.delete(`/v1/apiKeys/${createKeyResponse.body.apiKey.uuid}`)
+			.delete(`/v1/apiKeys/${createKeyResponse.body.data.id}`)
+			.set('Accept', JSON_API_MEDIA_TYPE)
 			.set('Authorization', `Bearer ${token}`)
 		expect(deleteResponse.status).toBe(403)
 	})
 
 	it('Password reset returns a generic response for unknown users', async () => {
-		const response = await application
-			.post('/v1/password-reset')
+		const response = await withJsonApiHeaders(
+			application.post('/v1/password-reset')
+		)
 			.send({ email: faker.internet.email() })
 		expect(response.status).toBe(200)
-		expect(response.body.message).toBe('If the account exists, password reset instructions have been sent.')
+		expect(response.body.data.attributes.message).toBe('If the account exists, password reset instructions have been sent.')
 	})
 
 	it('Password reset creates an expiring code for a known user', async () => {
 		vi.spyOn(mailer, 'sendMail').mockResolvedValue(undefined)
-		const response = await application
-			.post('/v1/password-reset')
+		const response = await withJsonApiHeaders(
+			application.post('/v1/password-reset')
+		)
 			.send({ email: user.email })
 		expect(response.status).toBe(200)
-		expect(response.body.message).toBe('If the account exists, password reset instructions have been sent.')
+		expect(response.body.data.attributes.message).toBe('If the account exists, password reset instructions have been sent.')
 
 		const resetRow = await database('password_resets')
 			.where('user_id', userId)
@@ -191,8 +224,9 @@ describe('Authentication tests', () => {
 			expires_at: new Date(Date.now() - (60 * 1000))
 		})
 
-		const response = await application
-			.post('/v1/password-update')
+		const response = await withJsonApiHeaders(
+			application.post('/v1/password-update')
+		)
 			.send({
 				email: user.email,
 				code: expiredCode,
@@ -209,8 +243,9 @@ describe('Authentication tests', () => {
 			expires_at: new Date(Date.now() + (60 * 60 * 1000))
 		})
 
-		const response = await application
-			.post('/v1/password-update')
+		const response = await withJsonApiHeaders(
+			application.post('/v1/password-update')
+		)
 			.send({
 				email: user.email,
 				code: validCode,
@@ -223,15 +258,17 @@ describe('Authentication tests', () => {
 	})
 
 	it('Social auth rejects unsupported providers', async () => {
-		const response = await application
-			.post('/v1/social-auth/twitter')
+		const response = await withJsonApiHeaders(
+			application.post('/v1/social-auth/twitter')
+		)
 			.send({ token: 'abc' })
 		expect(response.status).toBe(400)
 	})
 
 	it('Social auth rejects missing tokens', async () => {
-		const response = await application
-			.post('/v1/social-auth/google')
+		const response = await withJsonApiHeaders(
+			application.post('/v1/social-auth/google')
+		)
 			.send({})
 		expect(response.status).toBe(400)
 	})
@@ -239,8 +276,9 @@ describe('Authentication tests', () => {
 	it('Social auth rejects invalid tokens', async () => {
 		vi.spyOn(googleAuth, 'verifyGoogleIdToken').mockRejectedValue(new Error('Invalid token'))
 		process.env.GOOGLE_CLIENT_ID = 'test-client'
-		const response = await application
-			.post('/v1/social-auth/google')
+		const response = await withJsonApiHeaders(
+			application.post('/v1/social-auth/google')
+		)
 			.send({ token: 'bad-token' })
 		expect(response.status).toBe(400)
 	})
@@ -262,10 +300,11 @@ describe('Authentication tests', () => {
 		})
 		process.env.GOOGLE_CLIENT_ID = 'test-client'
 
-		const response = await application
-			.post('/v1/social-auth/google')
+		const response = await withJsonApiHeaders(
+			application.post('/v1/social-auth/google')
+		)
 			.send({ token: 'valid-token' })
-		expect(response.status).toBe(200)
-		expect(response.body).toHaveProperty('token')
+		expect(response.status).toBe(201)
+		expect(response.body.data.attributes).toHaveProperty('token')
 	})
-});
+})

@@ -4,7 +4,7 @@ import { database } from '../config/database.js'
 import { ApiKeyTable } from '../types.js'
 import { JwtPayload } from 'jsonwebtoken'
 import { generateRawApiKey, getApiKeyLast4, hashApiKey } from '../config/apiKeys.js'
-import { requireObjectBody, setJsonApiError } from '../utils/http.js'
+import { requireObjectBody, setJsonApiData, setJsonApiError, setJsonApiNoContent } from '../utils/http.js'
 
 /**
  * Create API key
@@ -33,11 +33,26 @@ export const createApiKey = async (ctx: Context) => {
 		const apiKey = await database<ApiKeyTable>('api_keys')
 			.where('uuid', uuid)
 			.first(['uuid', 'name', 'created_at', 'updated_at', 'last_used_at', 'key_last4'])
-		ctx.body = {
-			apiKey,
-			rawKey
+		if (!apiKey?.uuid) {
+			ctx.throw(500, 'Failed to load newly created API key.')
 		}
+		setJsonApiData(ctx, 201, {
+			type: 'api_keys',
+			id: apiKey.uuid,
+			attributes: {
+				name: apiKey.name,
+				key_last4: apiKey.key_last4 || null,
+				created_at: apiKey.created_at,
+				updated_at: apiKey.updated_at,
+				last_used_at: apiKey.last_used_at
+			}
+		}, {
+			raw_key: rawKey
+		})
 	} catch (error) {
+		if ((error as { status?: number }).status) {
+			throw error
+		}
 		ctx.throw(500, 'Internal Server Error')
 	}
 }
@@ -63,19 +78,19 @@ export const getUserApiKeys = async (ctx: Context) => {
 				last_used_at: apiKey.last_used_at
 			}
 			return {
-				type: 'apiKeys',
-				uuid: apiKey.uuid,
+				type: 'api_keys',
+				id: apiKey.uuid,
 				attributes
 			}
 		})
 
-		ctx.header['content-type'] = 'application/vnd.api+json'
-		ctx.body = {
-			data
-		}
+		setJsonApiData(ctx, 200, data)
 	} catch (error) {
 		// Handle the error appropriately (e.g., log, send error response)
 		console.error(error)
+		if ((error as { status?: number }).status) {
+			throw error
+		}
 		ctx.throw(500, 'Internal Server Error')
 	}
 }
@@ -95,9 +110,7 @@ export const deleteApiKey = async (ctx: Context) => {
 
 		if (apiKey.user_id == ctx.state.user.sub) {
 			await database<ApiKeyTable>('api_keys').where('uuid', apiKeyParam).delete()
-			ctx.body = {
-				data: 'Key deleted.'
-			}
+			setJsonApiNoContent(ctx)
 			return
 		}
 
@@ -106,6 +119,9 @@ export const deleteApiKey = async (ctx: Context) => {
 	} catch (error) {
 		// Handle the error appropriately (e.g., log, send error response)
 		console.error(error)
+		if ((error as { status?: number }).status) {
+			throw error
+		}
 		ctx.throw(500, 'Internal Server Error')
 	}
 

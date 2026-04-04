@@ -8,4 +8,4 @@ router.get('/ping', ping)
 router.get('/dashboard', dashboard)
 
 export const indexRoutes = () => router.routes()
-export const allowedIndexMethods = () => router.allowedMethods()
+export const allowedIndexMethods = () => router.allowedMethods({ throw: true })

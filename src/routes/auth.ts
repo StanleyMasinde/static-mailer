@@ -44,4 +44,4 @@ router.get('/me', authorize, me)
 router.post('/social-auth/:provider', socialAuth)
 
 export const authRoutes = () => router.routes()
-export const allowedAuthMethods = () => router.allowedMethods()
+export const allowedAuthMethods = () => router.allowedMethods({ throw: true })

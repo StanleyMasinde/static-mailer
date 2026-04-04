@@ -11,4 +11,4 @@ router
 	.delete('/apiKeys/:uuid', authorize, deleteApiKey)
 
 export const userRoutes = () => router.routes()
-export const allowedUserMethods = () => router.allowedMethods()
+export const allowedUserMethods = () => router.allowedMethods({ throw: true })

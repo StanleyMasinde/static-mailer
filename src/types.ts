@@ -38,9 +38,11 @@ export interface ApiKeyTable {
 }
 
 export interface ValidationMessage {
-    source: string,
+    source: {
+        pointer: string
+    },
     title: string
-    message: string
+    detail: string
 }
 
 export interface ValidationRuleFactory {

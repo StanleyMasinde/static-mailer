@@ -3,7 +3,7 @@ import { ApiKeysUsersJoin, EmailRequest, EmailSubmissionTable } from '../types.j
 import { fowardEmail } from '../config/mailer.js'
 import { database } from '../config/database.js'
 import { hashApiKey } from '../config/apiKeys.js'
-import { requireObjectBody, setJsonApiError } from '../utils/http.js'
+import { requireObjectBody, setJsonApiData, setJsonApiError } from '../utils/http.js'
 
 /**
  * Receive an email and deliver it to the user's mailbox
@@ -60,10 +60,13 @@ export const deliverEmail = async (ctx: Context): Promise<void> => {
 }
 
 function sendSuccessResponse(ctx: Context): void {
-	ctx.status = 200
-	ctx.body = {
-		message: 'Message accepted for delivery.',
-	}
+	setJsonApiData(ctx, 202, {
+		type: 'deliveries',
+		attributes: {
+			status: 'accepted',
+			message: 'Message accepted for delivery.'
+		}
+	})
 }
 
 function sendNotFoundResponse(ctx: Context): void {

@@ -7,7 +7,7 @@ import { compareHash, createHash } from '../config/hash.js'
 import { createToken, verifyToken } from '../config/jwt.js'
 import { sendMail } from '../config/mailer.js'
 import { verifyGoogleIdToken } from '../config/googleAuth.js'
-import { getBearerToken, requireObjectBody, setJsonApiError } from '../utils/http.js'
+import { getBearerToken, requireObjectBody, setJsonApiData, setJsonApiError } from '../utils/http.js'
 
 function buildUserTokenPayload(user: Pick<UserTable, 'id' | 'name' | 'email'>): JwtPayload {
 	return {
@@ -20,10 +20,10 @@ function buildUserTokenPayload(user: Pick<UserTable, 'id' | 'name' | 'email'>): 
 }
 
 function sendUnauthorizedResponse(ctx: Context) {
-	setJsonApiError(ctx, 403, {
-		status: '403',
-		title: 'Authorisation error',
-		detail: 'You are not allowed to access this resource.'
+	ctx.set('WWW-Authenticate', 'Bearer')
+	setJsonApiError(ctx, 401, {
+		title: 'Unauthorized',
+		detail: 'A valid bearer token is required to access this resource.'
 	})
 }
 
@@ -47,9 +47,11 @@ export const register = async (ctx: Context) => {
 	const userExists = await database<UserTable>('users').where('email', requestBody.email).first()
 	if (userExists) {
 		setJsonApiError(ctx, 422, {
-			source: '/data/attributes/email',
+			source: {
+				pointer: '/data/attributes/email'
+			},
 			title: 'Invalid email',
-			message: 'This email is already registered'
+			detail: 'This email is already registered.'
 		})
 		return
 	}
@@ -65,10 +67,16 @@ export const register = async (ctx: Context) => {
 	}
 
 	const token = createToken(buildUserTokenPayload(user))
-	ctx.body = {
-		user,
+	setJsonApiData(ctx, 201, {
+		type: 'users',
+		id: `${user.id}`,
+		attributes: {
+			name: user.name,
+			email: user.email
+		}
+	}, {
 		token
-	}
+	})
 	sendMail({
 		subject: 'Welcome to Static Mailer',
 		receipient: user.email,
@@ -88,13 +96,18 @@ export const login = async (ctx: Context) => {
 		const passwordMatches = await compareHash(requestBody.password, user.password)
 		if (passwordMatches) {
 			const token = createToken(buildUserTokenPayload(user))
-			ctx.body = { token }
+			setJsonApiData(ctx, 200, {
+				type: 'tokens',
+				id: `${user.id}`,
+				attributes: {
+					token
+				}
+			})
 			return
 		}
 	}
 
 	setJsonApiError(ctx, 401, {
-		status: '401',
 		title: 'Authentication error',
 		detail: 'These credentials do not match our records.'
 	})
@@ -114,7 +127,24 @@ export const me = async (ctx: Context) => {
 	const user = await database<UserTable>('users')
 		.where('id', userInToken.sub)
 		.first()
-	ctx.body = { user }
+	if (!user) {
+		setJsonApiError(ctx, 404, {
+			title: 'Not Found',
+			detail: 'The authenticated user could not be found.'
+		})
+		return
+	}
+
+	setJsonApiData(ctx, 200, {
+		type: 'users',
+		id: `${user.id}`,
+		attributes: {
+			name: user.name,
+			email: user.email,
+			created_at: user.created_at,
+			updated_at: user.updated_at
+		}
+	})
 }
 
 /**
@@ -174,11 +204,17 @@ export const sendPasswordResetInstructions = async (ctx: Context) => {
 			}
 		}
 
-		ctx.body = {
-			message: 'If the account exists, password reset instructions have been sent.'
-		}
+		setJsonApiData(ctx, 200, {
+			type: 'password_reset_requests',
+			attributes: {
+				message: 'If the account exists, password reset instructions have been sent.'
+			}
+		})
 	} catch (error) {
 		ctx.app.emit('error', error as Error, ctx)
+		if ((error as { status?: number }).status) {
+			throw error
+		}
 		ctx.throw('Server Error')
 	}
 }
@@ -218,19 +254,19 @@ export const changeUserPassword = async (ctx: Context) => {
 		const newPassword = await createHash(requestBody.password)
 		await database<UserTable>('users').where('id', user.id).update({ password: newPassword })
 		await database<PasswordResetsTable>('password_resets').where('user_id', user.id).delete()
-		ctx.header['content-type'] = 'application/vnd.api+json'
-		ctx.body = {
-			data: {
-				id: user.id,
-				type: 'password_resets',
-				attributes: {
-					status: 'success',
-					message: 'Your password has been successfully reset.'
-				}
+		setJsonApiData(ctx, 200, {
+			id: `${user.id}`,
+			type: 'password_resets',
+			attributes: {
+				status: 'success',
+				message: 'Your password has been successfully reset.'
 			}
-		}
+		})
 	} catch (error) {
 		ctx.app.emit('error', error as Error, ctx)
+		if ((error as { status?: number }).status) {
+			throw error
+		}
 		ctx.throw('Something broke!')
 	}
 }
@@ -295,7 +331,13 @@ export const socialAuth = async (ctx: Context) => {
 		const userInDb = await database<UserTable>('users').where('email', userInfo.email).first()
 		if (userInDb) {
 			const authToken = createToken(buildUserTokenPayload(userInDb))
-			ctx.body = { token: authToken }
+			setJsonApiData(ctx, 200, {
+				type: 'tokens',
+				id: `${userInDb.id}`,
+				attributes: {
+					token: authToken
+				}
+			})
 			return
 		}
 
@@ -310,7 +352,13 @@ export const socialAuth = async (ctx: Context) => {
 			name: userInfo.name,
 			email: userInfo.email
 		} as Pick<UserTable, 'id' | 'name' | 'email'>))
-		ctx.body = { token: authToken }
+		setJsonApiData(ctx, 201, {
+			type: 'tokens',
+			id: `${userId}`,
+			attributes: {
+				token: authToken
+			}
+		})
 
 		sendMail({
 			subject: 'Welcome to Static Mailer',
