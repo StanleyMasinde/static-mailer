@@ -1,0 +1,163 @@
+mixin laravelMail(options)
+  - const brandName = options.brandName || data?.company_name || companyName || 'Static Mailer'
+  - const brandUrl = options.brandUrl || data?.company_url || companyUrl || appUrl || data?.app_url || '#'
+  - const preheader = options.preheader || ''
+  - const greeting = options.greeting || 'Hello!'
+  - const buttonText = options.buttonText || null
+  - const buttonUrl = options.buttonUrl || null
+  - const outro = options.outro || []
+  - const footerText = options.footerText || `${brandName}. All rights reserved.`
+
+  doctype html
+  html
+    head
+      meta(charset='UTF-8')
+      meta(name='viewport' content='width=device-width, initial-scale=1.0')
+      meta(name='x-apple-disable-message-reformatting')
+      title= options.title || brandName
+      style.
+        body {
+          margin: 0;
+          padding: 0;
+          width: 100% !important;
+          background-color: #f4f4f7;
+          color: #51545e;
+          -webkit-text-size-adjust: none;
+        }
+        body, td, th, p, a {
+          font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+        }
+        .preheader {
+          display: none !important;
+          visibility: hidden;
+          mso-hide: all;
+          font-size: 1px;
+          line-height: 1px;
+          max-height: 0;
+          max-width: 0;
+          opacity: 0;
+          overflow: hidden;
+        }
+        .email-wrapper {
+          width: 100%;
+          margin: 0;
+          padding: 0;
+          background-color: #f4f4f7;
+        }
+        .email-content {
+          width: 100%;
+          margin: 0;
+          padding: 0;
+        }
+        .email-masthead {
+          padding: 25px 0;
+          text-align: center;
+        }
+        .email-masthead_name {
+          font-size: 16px;
+          font-weight: 700;
+          color: #a8aaaf;
+          text-decoration: none;
+        }
+        .email-body {
+          width: 100%;
+          margin: 0;
+          padding: 0;
+        }
+        .email-body_inner {
+          width: 570px;
+          margin: 0 auto;
+          background-color: #ffffff;
+        }
+        .content-cell {
+          padding: 35px;
+        }
+        h1 {
+          margin-top: 0;
+          font-size: 20px;
+          font-weight: 700;
+          color: #333333;
+        }
+        p {
+          margin: 0 0 16px;
+          font-size: 16px;
+          line-height: 1.5em;
+        }
+        .action {
+          width: 100%;
+          margin: 30px auto;
+          text-align: center;
+        }
+        .button {
+          display: inline-block;
+          color: #ffffff !important;
+          text-decoration: none;
+          border-radius: 4px;
+          background-color: #2d3748;
+          border: 10px solid #2d3748;
+          font-size: 14px;
+        }
+        .subcopy {
+          margin-top: 25px;
+          padding-top: 25px;
+          border-top: 1px solid #eaeaec;
+        }
+        .subcopy p {
+          font-size: 13px;
+          color: #6b7280;
+        }
+        .email-footer {
+          width: 570px;
+          margin: 0 auto;
+          text-align: center;
+        }
+        .email-footer p {
+          color: #a8aaaf;
+          font-size: 12px;
+        }
+        @media only screen and (max-width: 600px) {
+          .email-body_inner,
+          .email-footer {
+            width: 100% !important;
+          }
+        }
+    body
+      span.preheader= preheader
+      table.email-wrapper(role='presentation' width='100%' cellpadding='0' cellspacing='0')
+        tr
+          td(align='center')
+            table.email-content(role='presentation' width='100%' cellpadding='0' cellspacing='0')
+              tr
+                td.email-masthead
+                  a.email-masthead_name(href=brandUrl target='_blank')= brandName
+              tr
+                td.email-body(width='100%')
+                  table.email-body_inner(role='presentation' align='center' width='570' cellpadding='0' cellspacing='0')
+                    tr
+                      td.content-cell
+                        h1= greeting
+                        block
+                        if buttonText && buttonUrl
+                          table.action(role='presentation' width='100%' cellpadding='0' cellspacing='0')
+                            tr
+                              td(align='center')
+                                a.button(href=buttonUrl target='_blank')= buttonText
+                        each line in outro
+                          p= line
+                        p
+                          | Regards,
+                          br
+                          = brandName
+                        if buttonText && buttonUrl
+                          table.subcopy(role='presentation' width='100%' cellpadding='0' cellspacing='0')
+                            tr
+                              td
+                                p
+                                  | If you're having trouble clicking the "#{buttonText}" button, copy and paste the URL below into your web browser:
+                                p= buttonUrl
+              tr
+                td
+                  table.email-footer(role='presentation' align='center' width='570' cellpadding='0' cellspacing='0')
+                    tr
+                      td.content-cell(align='center')
+                        p= footerText

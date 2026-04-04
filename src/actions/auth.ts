@@ -202,7 +202,8 @@ export const sendPasswordResetInstructions = async (ctx: Context) => {
 					subject: 'Password reset notification',
 					receipient: user.email,
 					data: {
-						code
+						code,
+						email: user.email
 					}
 				})
 			} catch (error) {
