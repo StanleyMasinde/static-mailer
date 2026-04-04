@@ -31,7 +31,7 @@ export function rateLimit(options: RateLimitOptions) {
 			setJsonApiError(ctx, 429, {
 				status: 429,
 				title: 'Too many requests',
-				detail: 'Rate limit exceeded. Please retry later.'
+				detail: 'Rate limit exceeded. Please try again later.'
 			})
 		}
 	})

@@ -62,7 +62,7 @@ export const deliverEmail = async (ctx: Context): Promise<void> => {
 function sendSuccessResponse(ctx: Context): void {
 	ctx.status = 200
 	ctx.body = {
-		message: 'Message on its way',
+		message: 'Message accepted for delivery.',
 	}
 }
 

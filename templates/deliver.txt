@@ -7,6 +7,6 @@ You received a new message from {{ email }}.
 Message received at {{ timestamp }}.
 
 Regards,
-[company_name]
+{{ company_name }}
 
-[company_name], LLC
+{{ company_name }}, LLC

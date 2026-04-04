@@ -22,7 +22,7 @@ function buildUserTokenPayload(user: Pick<UserTable, 'id' | 'name' | 'email'>): 
 function sendUnauthorizedResponse(ctx: Context) {
 	setJsonApiError(ctx, 403, {
 		status: '403',
-		title: 'Authorization error.',
+		title: 'Authorisation error',
 		detail: 'You are not allowed to access this resource.'
 	})
 }
@@ -48,7 +48,7 @@ export const register = async (ctx: Context) => {
 	if (userExists) {
 		setJsonApiError(ctx, 422, {
 			source: '/data/attributes/email',
-			title: 'Invalid E-mail',
+			title: 'Invalid email',
 			message: 'This email is already registered'
 		})
 		return
@@ -95,7 +95,7 @@ export const login = async (ctx: Context) => {
 
 	setJsonApiError(ctx, 401, {
 		status: '401',
-		title: 'Authentication error.',
+		title: 'Authentication error',
 		detail: 'These credentials do not match our records.'
 	})
 }
@@ -249,7 +249,7 @@ export const socialAuth = async (ctx: Context) => {
 		setJsonApiError(ctx, 400, {
 			status: 400,
 			title: 'Invalid provider',
-			detail: 'The provider is not supported. The supported provider is Google'
+			detail: 'The provider is not supported. The only supported provider is Google.'
 		})
 		break
 	}
@@ -265,7 +265,7 @@ export const socialAuth = async (ctx: Context) => {
 			setJsonApiError(ctx, 400, {
 				status: 400,
 				title: 'Missing token',
-				detail: 'Token missing from request body.'
+				detail: 'Token is missing from the request body.'
 			})
 			return
 		}

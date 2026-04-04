@@ -37,8 +37,8 @@ const ruleFactories: { [key: string]: ValidationRuleFactory } = {
 	},
 	email: {
 		validator: email,
-		title: 'Invalid E-mail',
-		detail: 'This field should be a valid email',
+		title: 'Invalid email',
+		detail: 'This field must be a valid email address',
 	},
 	phone: {
 		validator: phone,
@@ -60,8 +60,8 @@ export const validate = (param: Record<string, string>) => {
 		if (!body || typeof body !== 'object' || Array.isArray(body)) {
 			setJsonApiError(ctx, 400, {
 				status: 400,
-				title: 'Bad request.',
-				detail: 'Request body missing.'
+				title: 'Bad request',
+				detail: 'Request body is missing.'
 			})
 			return
 		}

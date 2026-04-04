@@ -112,7 +112,7 @@ export const deleteApiKey = async (ctx: Context) => {
 	function sendNotFoundResponse(apiKeyParam: string) {
 		setJsonApiError(ctx, 404, {
 			source: { parameter: 'uuid' },
-			title: 'Not found error.',
+			title: 'API key not found',
 			detail: `API key with id ${apiKeyParam} was not found.`
 		})
 	}
@@ -120,8 +120,8 @@ export const deleteApiKey = async (ctx: Context) => {
 	function sendUnauthorizedResponse() {
 		setJsonApiError(ctx, 403, {
 			status: 403,
-			title: 'Unauthorized error.',
-			detail: 'You are not authorized to delete this API key.'
+			title: 'Forbidden',
+			detail: 'You are not authorised to delete this API key.'
 		})
 	}
 }

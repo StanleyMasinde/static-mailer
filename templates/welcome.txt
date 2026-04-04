@@ -1,6 +1,6 @@
-Welcome to [company_name], {{name}}!
+Welcome to {{ company_name }}, {{ name }}!
 
-Thanks for creating an account with [company_name].
+Thanks for creating an account with {{ company_name }}.
 
 Get started by opening your account:
 {{ dashboard_url }}
@@ -8,6 +8,6 @@ Get started by opening your account:
 If you are having trouble with the link above, copy and paste it into your browser.
 
 Regards,
-[company_name]
+{{ company_name }}
 
-[company_name], LLC
+{{ company_name }}, LLC
