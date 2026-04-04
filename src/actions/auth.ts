@@ -1,70 +1,80 @@
 import { randomInt } from 'node:crypto'
 import { Context, Next } from 'koa'
+import { JwtPayload } from 'jsonwebtoken'
 import { GoogleJWTPayload, LoginRequest, PasswordResetsTable, RegisterRequest, UserTable, ChangePasswordRequest } from '../types.js'
 import { database } from '../config/database.js'
 import { compareHash, createHash } from '../config/hash.js'
 import { createToken, verifyToken } from '../config/jwt.js'
 import { sendMail } from '../config/mailer.js'
-import { JwtPayload } from 'jsonwebtoken'
 import { verifyGoogleIdToken } from '../config/googleAuth.js'
+import { getBearerToken, requireObjectBody, setJsonApiError } from '../utils/http.js'
+
+function buildUserTokenPayload(user: Pick<UserTable, 'id' | 'name' | 'email'>): JwtPayload {
+	return {
+		sub: `${user.id}`,
+		attributes: {
+			name: user.name,
+			email: user.email
+		}
+	}
+}
+
+function sendUnauthorizedResponse(ctx: Context) {
+	setJsonApiError(ctx, 403, {
+		status: '403',
+		title: 'Authorization error.',
+		detail: 'You are not allowed to access this resource.'
+	})
+}
+
+function sendInvalidPasswordResetCodeResponse(ctx: Context) {
+	setJsonApiError(ctx, 422, {
+		status: '422',
+		code: 'invalid_password_reset_code',
+		title: 'Invalid Password Reset Code',
+		detail: 'The password reset code is invalid or has expired.'
+	})
+}
 
 /**
  * Register a new user
  * @param ctx Koa context
  */
 export const register = async (ctx: Context) => {
-	const body = ctx.request.body
-	if (!body || typeof body !== 'object' || Array.isArray(body)) {
-		ctx.throw(400, 'Invalid request body')
-	}
-	const requestBody = body as unknown as RegisterRequest
+	const requestBody = requireObjectBody(ctx) as unknown as RegisterRequest
 	const password = await createHash(requestBody.password)
 
 	const userExists = await database<UserTable>('users').where('email', requestBody.email).first()
 	if (userExists) {
-		ctx.status = 422
-		ctx.header['content-type'] = 'application/vnd.api+json'
-		ctx.body = {
-			errors: [
-				{
-					source: '/data/attributes/email',
-					title: 'Invalid E-mail',
-					message: 'This email is already registered'
-				}
-			]
-		}
-		return
-	}
-	const [userId] = await database<UserTable>('users')
-		.insert({
-			'name': requestBody.name,
-			'email': requestBody.email,
-			'password': password
-		})
-	const user = await database<UserTable>('users').where('id', userId).first('id', 'name', 'email')
-	if (user) {
-		const Payload: JwtPayload = {
-			sub: `${user.id}`,
-			attributes: {
-				name: user.name,
-				email: user.email
-			}
-		}
-		const token = createToken(Payload)
-		ctx.body = {
-			user,
-			token
-		}
-		sendMail({
-			subject: 'Welcome to Static Mailer',
-			receipient: user.email,
-			template: 'welcome',
-			data: user
+		setJsonApiError(ctx, 422, {
+			source: '/data/attributes/email',
+			title: 'Invalid E-mail',
+			message: 'This email is already registered'
 		})
 		return
 	}
 
-	ctx.throw('Error registering user')
+	const [userId] = await database<UserTable>('users').insert({
+		name: requestBody.name,
+		email: requestBody.email,
+		password
+	})
+	const user = await database<UserTable>('users').where('id', userId).first('id', 'name', 'email')
+	if (!user) {
+		ctx.throw('Error registering user')
+	}
+
+	const token = createToken(buildUserTokenPayload(user))
+	ctx.body = {
+		user,
+		token
+	}
+	sendMail({
+		subject: 'Welcome to Static Mailer',
+		receipient: user.email,
+		template: 'welcome',
+		data: user
+	})
 }
 
 /**
@@ -72,49 +82,22 @@ export const register = async (ctx: Context) => {
  * @param ctx Koa context
  */
 export const login = async (ctx: Context) => {
-	const body = ctx.request.body
-	if (!body || typeof body !== 'object' || Array.isArray(body)) {
-		ctx.throw(400, 'Invalid request body')
-	}
-	const requestBody = body as unknown as LoginRequest
+	const requestBody = requireObjectBody(ctx) as unknown as LoginRequest
 	const user = await database<UserTable>('users').where('email', requestBody.email).first()
-	// The user exists we now check if the password matches
 	if (user) {
 		const passwordMatches = await compareHash(requestBody.password, user.password)
-		// The password matches so we generate a JWT
 		if (passwordMatches) {
-			const Payload: JwtPayload = {
-				sub: `${user.id}`,
-				attributes: {
-					name: user.name,
-					email: user.email
-				}
-			}
-			const token = createToken(Payload)
-			ctx.body = {
-				token
-			}
+			const token = createToken(buildUserTokenPayload(user))
+			ctx.body = { token }
 			return
 		}
-		// The password did not match send a failed auth response
-		return sendFailedAuthResponse()
 	}
-	return sendFailedAuthResponse()
 
-	function sendFailedAuthResponse() {
-		ctx.status = 401
-		ctx.header['content-type'] = 'application/vnd.api+json'
-		ctx.body = {
-			errors: [
-				{
-					status: '401',
-					title: 'Authentication error.',
-					detail: 'These credentials do not match our records.'
-				}
-			]
-		}
-		return
-	}
+	setJsonApiError(ctx, 401, {
+		status: '401',
+		title: 'Authentication error.',
+		detail: 'These credentials do not match our records.'
+	})
 }
 
 /**
@@ -122,80 +105,60 @@ export const login = async (ctx: Context) => {
  * @param ctx Koa.context
  */
 export const me = async (ctx: Context) => {
-	const bearerToken = ctx.request.header['authorization']?.split(' ')[1]
-
-	if (bearerToken) {
-		const userInToken = verifyToken(bearerToken)
-		const user = await database<UserTable>('users')
-			.where('id', userInToken.sub)
-			.first()
-		ctx.body = {
-			user
-		}
+	const bearerToken = getBearerToken(ctx)
+	if (!bearerToken) {
 		return
 	}
+
+	const userInToken = verifyToken(bearerToken)
+	const user = await database<UserTable>('users')
+		.where('id', userInToken.sub)
+		.first()
+	ctx.body = { user }
 }
 
 /**
  * Prevent unauthenticated route access
- * @param ctx 
- * @param next 
+ * @param ctx
+ * @param next
  */
 export const authorize = async (ctx: Context, next: Next) => {
-	const bearerToken = ctx.request.header['authorization']?.split(' ')[1]
-	if (bearerToken) {
-		try {
-			const user = verifyToken(bearerToken)
-			ctx.state.user = user
-			return await next()
-		} catch (err) {
-			return sendUnauthorizedResponse()
-		}
+	const bearerToken = getBearerToken(ctx)
+	if (!bearerToken) {
+		sendUnauthorizedResponse(ctx)
+		return
 	}
 
-	return sendUnauthorizedResponse()
-
-	function sendUnauthorizedResponse() {
-		ctx.status = 403
-		ctx.header['content-type'] = 'application/vnd.api+json'
-		ctx.body = {
-			errors: [
-				{
-					status: '403',
-					title: 'Authorization error.',
-					detail: 'You are not allowed to access this resource.'
-				}
-			]
-		}
-		return
+	try {
+		const user = verifyToken(bearerToken)
+		ctx.state.user = user
+		await next()
+	} catch {
+		sendUnauthorizedResponse(ctx)
 	}
 }
 
-
 /**
  * Handle password reset request.
- * 
  */
 export const sendPasswordResetInstructions = async (ctx: Context) => {
 	try {
-		const body = ctx.request.body
-		if (!body || typeof body !== 'object' || Array.isArray(body) || typeof (body as Record<string, unknown>).email !== 'string') {
+		const body = requireObjectBody(ctx)
+		if (typeof body.email !== 'string') {
 			ctx.throw(400, 'Invalid request body')
 		}
-		const email = (body as { email: string }).email
-		const user = await database<UserTable>('users').where({ email }).first()
+
+		const user = await database<UserTable>('users').where({ email: body.email }).first()
 		if (user) {
 			const code = randomInt(99999, 1000000).toString()
 			const codeHash = await createHash(code.toString())
 			const date = new Date()
-			const currentMinutes = date.getMinutes()
-			date.setMinutes(currentMinutes + 60)
-			await database<PasswordResetsTable>('password_resets')
-				.insert({
-					user_id: user.id,
-					code: codeHash,
-					expires_at: date
-				})
+			date.setMinutes(date.getMinutes() + 60)
+			await database<PasswordResetsTable>('password_resets').insert({
+				user_id: user.id,
+				code: codeHash,
+				expires_at: date
+			})
 			try {
 				await sendMail({
 					template: 'passwordreset',
@@ -225,17 +188,14 @@ export const sendPasswordResetInstructions = async (ctx: Context) => {
  */
 export const changeUserPassword = async (ctx: Context) => {
 	try {
-		const body = ctx.request.body
-		if (!body || typeof body !== 'object' || Array.isArray(body)) {
-			ctx.throw(400, 'Invalid request body')
-		}
-		const requestBody = body as unknown as ChangePasswordRequest
+		const requestBody = requireObjectBody(ctx) as unknown as ChangePasswordRequest
 		const user = await database<UserTable>('users')
 			.where('email', requestBody.email)
 			.first()
 
 		if (!user) {
-			return sendInvalidPasswordResetCodeResponse(ctx)
+			sendInvalidPasswordResetCodeResponse(ctx)
+			return
 		}
 
 		const resetCode = await database<PasswordResetsTable>('password_resets')
@@ -245,21 +205,19 @@ export const changeUserPassword = async (ctx: Context) => {
 			.first()
 
 		if (!resetCode) {
-			return sendInvalidPasswordResetCodeResponse(ctx)
+			sendInvalidPasswordResetCodeResponse(ctx)
+			return
 		}
 
 		const codeMatches = await compareHash(requestBody.code, resetCode.code)
 		if (!codeMatches) {
-			return sendInvalidPasswordResetCodeResponse(ctx)
+			sendInvalidPasswordResetCodeResponse(ctx)
+			return
 		}
 
 		const newPassword = await createHash(requestBody.password)
-		await database<UserTable>('users')
-			.where('id', user.id)
-			.update({ 'password': newPassword })
-		await database<PasswordResetsTable>('password_resets')
-			.where('user_id', user.id)
-			.delete()
+		await database<UserTable>('users').where('id', user.id).update({ password: newPassword })
+		await database<PasswordResetsTable>('password_resets').where('user_id', user.id).delete()
 		ctx.header['content-type'] = 'application/vnd.api+json'
 		ctx.body = {
 			data: {
@@ -271,30 +229,11 @@ export const changeUserPassword = async (ctx: Context) => {
 				}
 			}
 		}
-		return
 	} catch (error) {
 		ctx.app.emit('error', error as Error, ctx)
 		ctx.throw('Something broke!')
 	}
 }
-
-function sendInvalidPasswordResetCodeResponse(ctx: Context) {
-	ctx.header['content-type'] = 'application/vnd.api+json'
-	ctx.status = 422
-	ctx.body = {
-		errors: [
-			{
-				status: '422',
-				code: 'invalid_password_reset_code',
-				title: 'Invalid Password Reset Code',
-				detail: 'The password reset code is invalid or has expired.'
-			}
-		]
-	}
-}
-
-
-
 
 /**
  * Handle social auth
@@ -307,7 +246,11 @@ export const socialAuth = async (ctx: Context) => {
 		await handleGoogleAuth()
 		break
 	default:
-		invalidProvidererror()
+		setJsonApiError(ctx, 400, {
+			status: 400,
+			title: 'Invalid provider',
+			detail: 'The provider is not supported. The supported provider is Google'
+		})
 		break
 	}
 
@@ -319,57 +262,56 @@ export const socialAuth = async (ctx: Context) => {
 				? (body as { token: string }).token
 				: null
 		if (!token) {
-			return missingTokenError()
+			setJsonApiError(ctx, 400, {
+				status: 400,
+				title: 'Missing token',
+				detail: 'Token missing from request body.'
+			})
+			return
 		}
 
 		const expectedAudience = process.env.GOOGLE_CLIENT_ID
 		if (!expectedAudience) {
-			return socialAuthMisconfiguredError()
+			setJsonApiError(ctx, 500, {
+				status: 500,
+				title: 'Server configuration error',
+				detail: 'Google social authentication is not configured.'
+			})
+			return
 		}
 
 		let userInfo: GoogleJWTPayload
 		try {
 			userInfo = await verifyGoogleIdToken(token, expectedAudience)
 		} catch {
-			return invalidTokenError()
+			setJsonApiError(ctx, 400, {
+				status: 400,
+				title: 'Invalid token',
+				detail: 'The provided token is invalid.'
+			})
+			return
 		}
 
-		const email = userInfo.email
-		const userInDb = await database<UserTable>('users').where('email', email).first()
-
+		const userInDb = await database<UserTable>('users').where('email', userInfo.email).first()
 		if (userInDb) {
-			const Payload: JwtPayload = {
-				sub: `${userInDb.id}`,
-				attributes: {
-					name: userInDb.name,
-					email: userInDb.email
-				}
-			}
-
-			const token = createToken(Payload)
-			ctx.body = {
-				token
-			}
+			const authToken = createToken(buildUserTokenPayload(userInDb))
+			ctx.body = { token: authToken }
 			return
 		}
 
 		const [userId] = await database<UserTable>('users').insert({
 			name: userInfo.name,
 			email: userInfo.email,
-			password: '',
+			password: ''
 		})
 
-		const Payload: JwtPayload = {
-			sub: `${userId}`,
-			attributes: {
-				name: userInfo.name,
-				email: userInfo.email
-			}
-		}
-		const token2 = createToken(Payload)
-		ctx.body = {
-			token: token2
-		}
+		const authToken = createToken(buildUserTokenPayload({
+			id: userId,
+			name: userInfo.name,
+			email: userInfo.email
+		} as Pick<UserTable, 'id' | 'name' | 'email'>))
+		ctx.body = { token: authToken }
+
 		sendMail({
 			subject: 'Welcome to Static Mailer',
 			receipient: userInfo.email,
@@ -381,60 +323,5 @@ export const socialAuth = async (ctx: Context) => {
 				family_name: userInfo.family_name
 			}
 		})
-
-		return
-	}
-
-	function missingTokenError() {
-		ctx.status = 400
-		ctx.body = {
-			errors: [
-				{
-					status: 400,
-					title: 'Missing token',
-					detail: 'Token missing from request body.'
-				}
-			]
-		}
-		return
-	}
-
-	function invalidProvidererror() {
-		ctx.status = 400
-		return ctx.body = {
-			errors: [
-				{
-					status: 400,
-					title: 'Invalid provider',
-					detail: 'The provider is not supported. The supported provider is Google'
-				}
-			]
-		}
-	}
-
-	function invalidTokenError() {
-		ctx.status = 400
-		return ctx.body = {
-			errors: [
-				{
-					status: 400,
-					title: 'Invalid token',
-					detail: 'The provided token is invalid.'
-				}
-			]
-		}
-	}
-
-	function socialAuthMisconfiguredError() {
-		ctx.status = 500
-		return ctx.body = {
-			errors: [
-				{
-					status: 500,
-					title: 'Server configuration error',
-					detail: 'Google social authentication is not configured.'
-				}
-			]
-		}
 	}
 }

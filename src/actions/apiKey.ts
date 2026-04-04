@@ -1,9 +1,10 @@
-import { randomBytes } from 'crypto'
 import { v4 as uuidv4 } from 'uuid'
 import { Context } from 'koa'
 import { database } from '../config/database.js'
 import { ApiKeyTable } from '../types.js'
 import { JwtPayload } from 'jsonwebtoken'
+import { generateRawApiKey, getApiKeyLast4, hashApiKey } from '../config/apiKeys.js'
+import { requireObjectBody, setJsonApiError } from '../utils/http.js'
 
 /**
  * Create API key
@@ -11,24 +12,30 @@ import { JwtPayload } from 'jsonwebtoken'
  */
 export const createApiKey = async (ctx: Context) => {
 	try {
-		const { body } = ctx.request
-		if (!body || typeof body !== 'object' || Array.isArray(body) || typeof (body as Record<string, unknown>).name !== 'string') {
+		const body = requireObjectBody(ctx)
+		if (typeof body.name !== 'string') {
 			ctx.throw(400, 'Invalid request body')
 		}
-		const requestBody = body as { name: string }
 		const uuid = uuidv4()
-		const key = randomBytes(16).toString('base64url')
+		const rawKey = generateRawApiKey()
+		const keyHash = hashApiKey(rawKey)
+		const keyLast4 = getApiKeyLast4(rawKey)
 
 		await database<ApiKeyTable>('api_keys').insert({
 			uuid,
-			name: requestBody.name,
-			key,
+			name: body.name,
+			key: null,
+			key_hash: keyHash,
+			key_last4: keyLast4,
 			user_id: ctx.state.user.sub
 		})
 
-		const apiKey = await database<ApiKeyTable>('api_keys').where('uuid', uuid).first()
+		const apiKey = await database<ApiKeyTable>('api_keys')
+			.where('uuid', uuid)
+			.first(['uuid', 'name', 'created_at', 'updated_at', 'last_used_at', 'key_last4'])
 		ctx.body = {
-			apiKey
+			apiKey,
+			rawKey
 		}
 	} catch (error) {
 		ctx.throw(500, 'Internal Server Error')
@@ -44,13 +51,13 @@ export const getUserApiKeys = async (ctx: Context) => {
 		const user: JwtPayload = ctx.state.user
 		const apiKeys = await database<ApiKeyTable>('api_keys')
 			.where('user_id', user.sub)
-			.select('*')
+			.select('uuid', 'name', 'key_last4', 'created_at', 'updated_at', 'last_used_at')
 
 		const data = apiKeys.map((apiKey) => {
-			const attributes: Omit<ApiKeyTable, 'user_id'> = {
+			const attributes = {
 				uuid: apiKey.uuid,
 				name: apiKey.name,
-				key: apiKey.key,
+				key_last4: apiKey.key_last4 || null,
 				created_at: apiKey.created_at,
 				updated_at: apiKey.updated_at,
 				last_used_at: apiKey.last_used_at
@@ -103,32 +110,18 @@ export const deleteApiKey = async (ctx: Context) => {
 	}
 
 	function sendNotFoundResponse(apiKeyParam: string) {
-		ctx.status = 404
-		ctx.header['content-type'] = 'application/vnd.api+json'
-
-		ctx.body = {
-			errors: [
-				{
-					source: { parameter: 'uuid' },
-					title: 'Not found error.',
-					detail: `API key with id ${apiKeyParam} was not found.`
-				}
-			]
-		}
+		setJsonApiError(ctx, 404, {
+			source: { parameter: 'uuid' },
+			title: 'Not found error.',
+			detail: `API key with id ${apiKeyParam} was not found.`
+		})
 	}
 
 	function sendUnauthorizedResponse() {
-		ctx.status = 403
-		ctx.header['content-type'] = 'application/vnd.api+json'
-
-		ctx.body = {
-			errors: [
-				{
-					status: 403,
-					title: 'Unauthorized error.',
-					detail: 'You are not authorized to delete this API key.'
-				}
-			]
-		}
+		setJsonApiError(ctx, 403, {
+			status: 403,
+			title: 'Unauthorized error.',
+			detail: 'You are not authorized to delete this API key.'
+		})
 	}
 }

@@ -17,7 +17,7 @@ const user = {
 
 let token = ''
 let userId: number
-let keyUiid = faker.string.uuid()
+let keyUuid = ''
 
 describe('Authentication tests', () => {
 	afterAll(async () => {
@@ -107,22 +107,25 @@ describe('Authentication tests', () => {
 	})
 
 	it('Get user API KEYS', async () => {
-		await database('api_keys')
-			.insert({
-				uuid: keyUiid,
-				key: faker.string.alphanumeric(24),
-				user_id: userId
-			})
+		const createResponse = await application
+			.post('/v1/apiKeys')
+			.set('Authorization', `Bearer ${token}`)
+			.send({ name: faker.lorem.word() })
+		expect(createResponse.status).toBe(200)
+		keyUuid = createResponse.body.apiKey.uuid
+
 		const response = await application
 			.get('/v1/apiKeys')
 			.set('Authorization', `Bearer ${token}`)
 
 		expect(response.body.data.length).toBe(1)
+		expect(response.body.data[0].attributes).toHaveProperty('key_last4')
+		expect(response.body.data[0].attributes).not.toHaveProperty('key')
 	})
 
 	it('Delete an API KEY', async () => {
 		const response = await application
-			.delete(`/v1/apiKeys/${keyUiid}`)
+			.delete(`/v1/apiKeys/${keyUuid}`)
 			.set('Authorization', `Bearer ${token}`)
 		expect(response.status).toBe(200)
 		expect(response.body.data).toBe('Key deleted.')

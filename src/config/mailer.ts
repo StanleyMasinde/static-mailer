@@ -32,6 +32,27 @@ function getDashboardUrl() {
 	return rawUrl.endsWith('/') ? rawUrl.slice(0, -1) : rawUrl
 }
 
+function getTemplateContext() {
+	const appUrl = getAppUrl()
+	const companyUrl = getCompanyUrl()
+	const dashboardUrl = getDashboardUrl()
+	return {
+		appUrl,
+		companyUrl,
+		dashboardUrl
+	}
+}
+
+function getBaseTemplateData() {
+	const { appUrl, companyUrl, dashboardUrl } = getTemplateContext()
+	return {
+		app_url: appUrl,
+		dashboard_url: dashboardUrl,
+		company_name: COMPANY_NAME,
+		company_url: companyUrl
+	}
+}
+
 function escapeRegex(input: string) {
 	return input.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
 }
@@ -74,17 +95,12 @@ const transport = nodemailer.createTransport({
  */
 export const fowardEmail = async (recipientEmail: string, subject: string, senderEmail: string, message: string, template: string = 'deliver') => {
 	const timestamp = new Date().toUTCString()
-	const appUrl = getAppUrl()
-	const companyUrl = getCompanyUrl()
-	const dashboardUrl = getDashboardUrl()
+	const { appUrl, companyUrl, dashboardUrl } = getTemplateContext()
 	const templateData: Record<string, string | number | Date> = {
+		...getBaseTemplateData(),
 		email: senderEmail,
 		message,
-		timestamp,
-		app_url: appUrl,
-		dashboard_url: dashboardUrl,
-		company_name: COMPANY_NAME,
-		company_url: companyUrl
+		timestamp
 	}
 	const text = substituteTemplateTokens(readFileSync(`./templates/${template}.txt`).toString(), templateData)
 	await transport.sendMail({
@@ -115,14 +131,9 @@ export const fowardEmail = async (recipientEmail: string, subject: string, sende
  */
 export const sendMail = async (mailOptions: EmailOptions) => {
 	const text = readFileSync(`./templates/${mailOptions.template}.txt`).toString('utf8')
-	const appUrl = getAppUrl()
-	const companyUrl = getCompanyUrl()
-	const dashboardUrl = getDashboardUrl()
+	const { appUrl, companyUrl } = getTemplateContext()
 	const templateData: Record<string, string | number | Date> = {
-		app_url: appUrl,
-		dashboard_url: dashboardUrl,
-		company_name: COMPANY_NAME,
-		company_url: companyUrl,
+		...getBaseTemplateData(),
 		...mailOptions.data
 	}
 	const subsititutedText = substituteTemplateTokens(text, templateData)

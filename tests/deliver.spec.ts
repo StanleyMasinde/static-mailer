@@ -42,10 +42,12 @@ describe('Email delivery test', () => {
 
     expect(createApiKeyRequest.status).toBe(200);
     expect(createApiKeyRequest.body).toHaveProperty('apiKey');
-    expect(createApiKeyRequest.body.apiKey).toHaveProperty('key');
+    expect(createApiKeyRequest.body).toHaveProperty('rawKey');
+    expect(createApiKeyRequest.body.apiKey).toHaveProperty('key_last4');
+    expect(createApiKeyRequest.body.apiKey).not.toHaveProperty('key');
 
     const deliveryResponse = await requester
-      .post(`/api/v1/deliver/${createApiKeyRequest.body.apiKey.key}`)
+      .post(`/api/v1/deliver/${createApiKeyRequest.body.rawKey}`)
       .send({
         subject: faker.lorem.sentence(),
         email: faker.internet.email(),
@@ -112,7 +114,7 @@ describe('Email delivery test', () => {
     vi.spyOn(mailer, 'fowardEmail').mockRejectedValue(new Error('SMTP unavailable'));
 
     const deliveryResponse = await requester
-      .post(`/api/v1/deliver/${createApiKeyRequest.body.apiKey.key}`)
+      .post(`/api/v1/deliver/${createApiKeyRequest.body.rawKey}`)
       .send({
         subject: faker.lorem.sentence(),
         email: faker.internet.email(),

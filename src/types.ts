@@ -29,7 +29,9 @@ export interface ApiKeyTable {
     uuid?: string,
     user_id?: number,
     name: string,
-    key: string
+    key?: string | null,
+    key_hash?: string,
+    key_last4?: string,
     created_at: Date,
     updated_at: Date,
     last_used_at: Date

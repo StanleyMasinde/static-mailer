@@ -1,5 +1,6 @@
 import { Context, Next } from 'koa'
 import { ValidationMessage, ValidationRuleFactory } from '../types.js'
+import { setJsonApiError, setJsonApiErrors } from '../utils/http.js'
 
 function required(value: unknown): boolean {
 	if (value === null || value === undefined) {
@@ -57,17 +58,11 @@ export const validate = (param: Record<string, string>) => {
 		const body = ctx.request.body
 
 		if (!body || typeof body !== 'object' || Array.isArray(body)) {
-			ctx.set('Content-Type', 'application/vnd.api+json')
-			ctx.status = 400
-			ctx.body = {
-				errors: [
-					{
-						status: 400,
-						title: 'Bad request.',
-						detail: 'Request body missing.',
-					},
-				],
-			}
+			setJsonApiError(ctx, 400, {
+				status: 400,
+				title: 'Bad request.',
+				detail: 'Request body missing.'
+			})
 			return
 		}
 		const payload = body as Record<string, unknown>
@@ -90,11 +85,7 @@ export const validate = (param: Record<string, string>) => {
 		}
 
 		if (errors.length > 0) {
-			ctx.status = 422
-			ctx.set('Content-Type', 'application/vnd.api+json')
-			ctx.body = {
-				errors,
-			}
+			setJsonApiErrors(ctx, 422, errors)
 			return
 		}
 
