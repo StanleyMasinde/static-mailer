@@ -47,9 +47,14 @@ export const getUserApiKeys = async (ctx: Context) => {
 			.select('*')
 
 		const data = apiKeys.map((apiKey) => {
-			// TODO: #7 Check if user_id can be ommited.
-			// eslint-disable-next-line @typescript-eslint/no-unused-vars
-			const { user_id, ...attributes } = apiKey
+			const attributes: Omit<ApiKeyTable, 'user_id'> = {
+				uuid: apiKey.uuid,
+				name: apiKey.name,
+				key: apiKey.key,
+				created_at: apiKey.created_at,
+				updated_at: apiKey.updated_at,
+				last_used_at: apiKey.last_used_at
+			}
 			return {
 				type: 'apiKeys',
 				uuid: apiKey.uuid,

@@ -54,18 +54,16 @@ export interface EmailOptions {
     data: Record<string, string | number | Date>
 }
 
-// TODO: #8 Type this correctly
 export interface GoogleJWTPayload {
-    [key: string]: string;
     email: string,
-    //email_verified: boolean,
+    email_verified: boolean,
     azp: string,
-    name: string
-    //picture?: string,
+    name: string,
+    picture?: string,
     given_name: string,
     family_name: string,
-    //iat: number
-    //exp: number
+    iat: number,
+    exp: number
 }
 
 export interface EmailSubmissionTable {
@@ -73,7 +71,9 @@ export interface EmailSubmissionTable {
     key_uuid?: string
     subject?: string
     message?: string
-    delivered_at?: string
+    delivery_status?: 'accepted' | 'failed'
+    delivered_at?: Date
+    sender_ip?: string
     created_at?: string
     updated_at?: string
 }

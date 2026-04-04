@@ -33,7 +33,7 @@ describe('Authentication tests', () => {
 
 		expect(response.status).toBe(200);
 		expect(response.body).toHaveProperty('token');
-		expect(response.body.user).toHaveProperty('email'); // TODO:  This needs to also check the value
+		expect(response.body.user.email).toBe(user.email);
 	});
 
 	it('User registration fails when email exists', async () => {

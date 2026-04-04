@@ -228,59 +228,57 @@ export const changeUserPassword = async (ctx: Context) => {
 			.where('email', requestBody.email)
 			.first()
 
-		if (user) {
-			const resetCode = await database<PasswordResetsTable>('password_resets')
-				.where('user_id', user.id)
-				.first()
-
-			if (resetCode) {
-				const codeMatches = await compareHash(requestBody.code, resetCode.code)
-
-				if (codeMatches) {
-					const newPassword = await createHash(requestBody.password)
-					await database<UserTable>('users')
-						.where('id', user.id)
-						.update({ 'password': newPassword })
-					ctx.header['content-type'] = 'application/vnd.api+json'
-					ctx.body = {
-						data: {
-							id: user.id,
-							type: 'password_resets',
-							attributes: {
-								status: 'success',
-								message: 'Your password has been successfully reset.'
-							}
-						}
-					}
-				}
-				else {
-					sendFailedResponse(user)
-				}
-			} else {
-				sendFailedResponse(user)
-			}
+		if (!user) {
+			return sendInvalidPasswordResetCodeResponse(ctx)
 		}
 
-		// TODO: #6 Refactor this part.
-		// eslint-disable-next-line no-inner-declarations
-		function sendFailedResponse(user: UserTable) {
-			ctx.header['content-type'] = 'application/vnd.api+json'
-			ctx.status = 422
-			ctx.body = {
-				errors: [
-					{
-						id: user.id,
-						status: '422',
-						code: 'invalid_password_reset_code',
-						title: 'Invalid Password Reset Code',
-						detail: 'The password reset code is invalid or has expired.'
-					}
-				]
+		const resetCode = await database<PasswordResetsTable>('password_resets')
+			.where('user_id', user.id)
+			.first()
+
+		if (!resetCode) {
+			return sendInvalidPasswordResetCodeResponse(ctx)
+		}
+
+		const codeMatches = await compareHash(requestBody.code, resetCode.code)
+		if (!codeMatches) {
+			return sendInvalidPasswordResetCodeResponse(ctx)
+		}
+
+		const newPassword = await createHash(requestBody.password)
+		await database<UserTable>('users')
+			.where('id', user.id)
+			.update({ 'password': newPassword })
+		ctx.header['content-type'] = 'application/vnd.api+json'
+		ctx.body = {
+			data: {
+				id: user.id,
+				type: 'password_resets',
+				attributes: {
+					status: 'success',
+					message: 'Your password has been successfully reset.'
+				}
 			}
 		}
+		return
 	} catch (error) {
 		console.log(error)
 		ctx.throw('Something broke!')
+	}
+}
+
+function sendInvalidPasswordResetCodeResponse(ctx: Context) {
+	ctx.header['content-type'] = 'application/vnd.api+json'
+	ctx.status = 422
+	ctx.body = {
+		errors: [
+			{
+				status: '422',
+				code: 'invalid_password_reset_code',
+				title: 'Invalid Password Reset Code',
+				detail: 'The password reset code is invalid or has expired.'
+			}
+		]
 	}
 }
 
@@ -359,7 +357,12 @@ export const socialAuth = async (ctx: Context) => {
 			subject: 'Welcome to Static Mailer',
 			receipient: userInfo.email,
 			template: 'welcome',
-			data: userInfo
+			data: {
+				name: userInfo.name,
+				email: userInfo.email,
+				given_name: userInfo.given_name,
+				family_name: userInfo.family_name
+			}
 		})
 
 		return

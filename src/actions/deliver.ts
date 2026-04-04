@@ -27,6 +27,9 @@ export const deliverEmail = async (ctx: Context): Promise<void> => {
 				key_uuid: keyInDB.uuid,
 				subject: body.subject,
 				message: body.message,
+				delivery_status: 'accepted',
+				delivered_at: new Date(),
+				sender_ip: ctx.ip
 			})
 			sendSuccessResponse(ctx)
 		} else {
