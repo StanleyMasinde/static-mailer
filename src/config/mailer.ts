@@ -12,6 +12,10 @@ const {
 	MAILER_PASSWORD,
 } = process.env
 
+function escapeRegex(input: string) {
+	return input.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+}
+
 const transport = nodemailer.createTransport({
 	host: MAILER_HOST,
 	port: parseInt(MAILER_PORT),
@@ -67,8 +71,12 @@ export const sendMail = async (mailOptions: EmailOptions) => {
 
 	for (const item in mailOptions.data) {
 		const itemSub = mailOptions.data[item]
-		const regex = new RegExp(`\\{${item}\\}`, 'g')
-		subsititutedText = text.replace(regex, itemSub.toString())
+		const escapedItem = escapeRegex(item)
+		const doubleBraceRegex = new RegExp(`\\{\\{\\s*${escapedItem}\\s*\\}\\}`, 'g')
+		const singleBraceRegex = new RegExp(`\\{\\s*${escapedItem}\\s*\\}`, 'g')
+		subsititutedText = subsititutedText
+			.replace(doubleBraceRegex, itemSub.toString())
+			.replace(singleBraceRegex, itemSub.toString())
 	}
 
 	

@@ -6,6 +6,7 @@ const router = new koaRouter()
 
 router.post('/api/v1/deliver/:apiKey',
 	validate({
+		subject: 'required',
 		email: 'required|email',
 		message: 'required'
 	}),

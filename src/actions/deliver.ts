@@ -22,22 +22,37 @@ export const deliverEmail = async (ctx: Context): Promise<void> => {
 			.first(['users.email', 'api_keys.uuid'])
 
 		if (keyInDB) {
-			await fowardEmail(keyInDB.email, body.subject, body.email, body.message)
-			await database<EmailSubmissionTable>('email_submissions').insert({
-				key_uuid: keyInDB.uuid,
-				subject: body.subject,
-				message: body.message,
-				delivery_status: 'accepted',
-				delivered_at: new Date(),
-				sender_ip: ctx.ip
-			})
-			sendSuccessResponse(ctx)
+			try {
+				await fowardEmail(keyInDB.email, body.subject, body.email, body.message)
+				await database<EmailSubmissionTable>('email_submissions').insert({
+					key_uuid: keyInDB.uuid,
+					subject: body.subject,
+					message: body.message,
+					delivery_status: 'accepted',
+					delivered_at: new Date(),
+					sender_ip: ctx.ip
+				})
+				await database('api_keys')
+					.where('uuid', keyInDB.uuid)
+					.update({ last_used_at: new Date() })
+				sendSuccessResponse(ctx)
+			} catch (error) {
+				await database<EmailSubmissionTable>('email_submissions').insert({
+					key_uuid: keyInDB.uuid,
+					subject: body.subject,
+					message: body.message,
+					delivery_status: 'failed',
+					delivered_at: new Date(),
+					sender_ip: ctx.ip
+				})
+				sendErrorResponse(ctx, 502, 'Message delivery failed.')
+			}
 		} else {
 			sendNotFoundResponse(ctx)
 		}
 	} catch (error) {
 		console.error('An error occurred while delivering the email:', error)
-		sendErrorResponse(ctx, 'Internal Server Error')
+		sendErrorResponse(ctx, 500, 'Internal Server Error')
 	}
 }
 
@@ -50,14 +65,28 @@ function sendSuccessResponse(ctx: Context): void {
 
 function sendNotFoundResponse(ctx: Context): void {
 	ctx.status = 404
+	ctx.set('Content-Type', 'application/vnd.api+json')
 	ctx.body = {
-		message: 'The provided API key is invalid',
+		errors: [
+			{
+				status: 404,
+				title: 'Invalid API key',
+				detail: 'The provided API key is invalid.'
+			}
+		]
 	}
 }
 
-function sendErrorResponse(ctx: Context, message: string): void {
-	ctx.status = 500
+function sendErrorResponse(ctx: Context, status: number, message: string): void {
+	ctx.status = status
+	ctx.set('Content-Type', 'application/vnd.api+json')
 	ctx.body = {
-		message,
+		errors: [
+			{
+				status,
+				title: 'Delivery error',
+				detail: message
+			}
+		]
 	}
 }
