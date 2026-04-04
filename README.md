@@ -147,6 +147,73 @@ Common error responses:
 - `400 Invalid token`
 - `500 Server configuration error` (`GOOGLE_CLIENT_ID` missing)
 
+### Minimal Nuxt 4 example
+Use this when you already have a provider token from Google or GitHub on the client.
+
+```ts
+// composables/useSocialAuth.ts
+type SocialProvider = 'google' | 'github'
+
+export const useSocialAuth = () => {
+	const config = useRuntimeConfig()
+	const accessToken = useCookie<string | null>('access_token', { default: () => null })
+	const refreshToken = useCookie<string | null>('refresh_token', { default: () => null })
+
+	const loginWithProvider = async (provider: SocialProvider, token: string) => {
+		const response = await $fetch<{
+			meta: { token: string; refreshToken: string }
+		}>(`/v1/social-auth/${provider}`, {
+			baseURL: config.public.apiBaseUrl,
+			method: 'POST',
+			headers: {
+				Accept: 'application/vnd.api+json',
+				'Content-Type': 'application/vnd.api+json'
+			},
+			body: { token }
+		})
+
+		accessToken.value = response.meta.token
+		refreshToken.value = response.meta.refreshToken
+		return response
+	}
+
+	return { loginWithProvider, accessToken, refreshToken }
+}
+```
+
+```vue
+<!-- pages/login.vue -->
+<script setup lang="ts">
+const { loginWithProvider } = useSocialAuth()
+
+// Replace this with the real token from Google/GitHub SDK.
+const providerToken = ref('')
+
+const loginWithGoogle = async () => {
+	await loginWithProvider('google', providerToken.value)
+	await navigateTo('/dashboard')
+}
+</script>
+
+<template>
+	<div>
+		<input v-model="providerToken" placeholder="Provider token" />
+		<button @click="loginWithGoogle">Continue with Google</button>
+	</div>
+</template>
+```
+
+```ts
+// nuxt.config.ts (Nuxt 4)
+export default defineNuxtConfig({
+	runtimeConfig: {
+		public: {
+			apiBaseUrl: 'https://localhost:3000'
+		}
+	}
+})
+```
+
 ## Example requests
 Register:
 ```bash
