@@ -107,6 +107,16 @@ export interface RefreshTokenTable {
     updated_at?: Date
 }
 
+export interface SocialAccountTable {
+    id?: number,
+    user_id: number,
+    provider: 'google',
+    provider_user_id: string,
+    provider_email: string,
+    created_at?: Date,
+    updated_at?: Date
+}
+
 export interface ChangePasswordRequest {
     /**
      * The email of the user.

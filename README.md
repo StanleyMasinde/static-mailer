@@ -109,6 +109,41 @@ If these are wrong, the API returns:
 - Served by API at: `GET /openapi.yaml`
 - Interactive docs UI (Swagger-style): `GET /docs`
 
+## Google auth flow
+Endpoint:
+- `POST /v1/social-auth/google`
+- Headers:
+  - `Accept: application/vnd.api+json`
+  - `Content-Type: application/vnd.api+json`
+- Body:
+
+```json
+{
+  "token": "<google-id-token>"
+}
+```
+
+Behavior:
+1. Route dispatches through `POST /v1/social-auth/:provider`; only `google` is supported.
+2. Server reads token from a raw string body or from `{ "token": "..." }`.
+3. `GOOGLE_CLIENT_ID` must be configured or the endpoint returns `500`.
+4. Token is verified against Google JWKS (`https://www.googleapis.com/oauth2/v3/certs`) with cached keys and JWT checks:
+   - `alg=RS256`, known `kid`
+   - valid RSA signature, plus required Google `sub` claim
+   - valid claims (`iss`, `aud`, `exp`, `iat`, `email`, `email_verified=true`)
+5. If verification fails, returns `400 Invalid token`.
+6. Server looks up `social_accounts` by (`provider=google`, `provider_user_id=sub`):
+   - if found, it signs in that linked user (`200`).
+7. If no provider link exists:
+   - if a local user exists with the same email, it creates a provider link and signs in (`200`);
+   - otherwise it creates a new user, creates provider link, signs in (`201`), and sends welcome email.
+
+Common error responses:
+- `400 Invalid provider` (anything except `google`)
+- `400 Missing token`
+- `400 Invalid token`
+- `500 Server configuration error` (`GOOGLE_CLIENT_ID` missing)
+
 ## Example requests
 Register:
 ```bash

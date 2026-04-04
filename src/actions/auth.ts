@@ -1,7 +1,7 @@
 import { createHash, randomBytes, randomInt } from 'node:crypto'
 import { Context, Next } from 'koa'
 import { JwtPayload } from 'jsonwebtoken'
-import { GoogleJWTPayload, LoginRequest, PasswordResetsTable, RefreshTokenTable, RegisterRequest, UserTable, ChangePasswordRequest } from '../types.js'
+import { GoogleJWTPayload, LoginRequest, PasswordResetsTable, RefreshTokenTable, RegisterRequest, UserTable, ChangePasswordRequest, SocialAccountTable } from '../types.js'
 import { database } from '../config/database.js'
 import { compareHash, createHash as createPasswordHash } from '../config/hash.js'
 import { createAccessToken, verifyToken } from '../config/jwt.js'
@@ -364,51 +364,98 @@ export const socialAuth = async (ctx: Context) => {
 			return
 		}
 
-		const userInDb = await database<UserTable>('users').where('email', userInfo.email).first()
-		if (userInDb) {
-			const tokens = await issueTokenPair(userInDb)
+		const providerUserId = typeof userInfo.sub === 'string' ? userInfo.sub.trim() : ''
+		if (!providerUserId) {
+			setJsonApiError(ctx, 400, {
+				status: 400,
+				title: 'Invalid token',
+				detail: 'The provided token is invalid.'
+			})
+			return
+		}
+
+		const socialAccount = await database<SocialAccountTable>('social_accounts')
+			.where({
+				provider: 'google',
+				provider_user_id: providerUserId
+			})
+			.first()
+		if (socialAccount) {
+			const linkedUser = await database<UserTable>('users')
+				.where('id', socialAccount.user_id)
+				.first('id', 'name', 'email')
+			if (!linkedUser) {
+				setJsonApiError(ctx, 401, {
+					title: 'Authentication error',
+					detail: 'These credentials do not match our records.'
+				})
+				return
+			}
+			const tokens = await issueTokenPair(linkedUser)
 			setJsonApiData(ctx, 200, {
 				type: 'tokens',
-				id: `${userInDb.id}`,
+				id: `${linkedUser.id}`,
 				attributes: {
 					token: tokens.token,
 					refresh_token: tokens.refreshToken
 				}
 			})
+
+			if (socialAccount.provider_email !== userInfo.email) {
+				await database<SocialAccountTable>('social_accounts')
+					.where('id', socialAccount.id as number)
+					.update({ provider_email: userInfo.email })
+			}
 			return
 		}
 
-		const [userId] = await database<UserTable>('users').insert({
-			name: userInfo.name,
-			email: userInfo.email,
-			password: ''
+		let user = await database<UserTable>('users')
+			.where('email', userInfo.email)
+			.first('id', 'name', 'email')
+		const isNewUser = !user
+		if (!user) {
+			const [userId] = await database<UserTable>('users').insert({
+				name: userInfo.name,
+				email: userInfo.email,
+				password: ''
+			})
+			user = {
+				id: userId,
+				name: userInfo.name,
+				email: userInfo.email
+			} as Pick<UserTable, 'id' | 'name' | 'email'>
+		}
+
+		await database<SocialAccountTable>('social_accounts').insert({
+			user_id: user.id,
+			provider: 'google',
+			provider_user_id: providerUserId,
+			provider_email: userInfo.email
 		})
 
-		const tokens = await issueTokenPair({
-			id: userId,
-			name: userInfo.name,
-			email: userInfo.email
-		} as Pick<UserTable, 'id' | 'name' | 'email'>)
-		setJsonApiData(ctx, 201, {
+		const tokens = await issueTokenPair(user)
+		setJsonApiData(ctx, isNewUser ? 201 : 200, {
 			type: 'tokens',
-			id: `${userId}`,
+			id: `${user.id}`,
 			attributes: {
 				token: tokens.token,
 				refresh_token: tokens.refreshToken
 			}
 		})
 
-		sendMail({
-			subject: 'Welcome to Static Mailer',
-			receipient: userInfo.email,
-			template: 'welcome',
-			data: {
-				name: userInfo.name,
-				email: userInfo.email,
-				given_name: userInfo.given_name,
-				family_name: userInfo.family_name
-			}
-		})
+		if (isNewUser) {
+			sendMail({
+				subject: 'Welcome to Static Mailer',
+				receipient: userInfo.email,
+				template: 'welcome',
+				data: {
+					name: userInfo.name,
+					email: userInfo.email,
+					given_name: userInfo.given_name,
+					family_name: userInfo.family_name
+				}
+			})
+		}
 	}
 }
 

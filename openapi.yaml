@@ -345,6 +345,18 @@ paths:
     post:
       tags: [Auth]
       summary: Social auth login
+      description: |
+        Exchanges a Google ID token for a StaticMailer access token and refresh token.
+
+        Flow:
+        1. Send `POST /v1/social-auth/google` with a Google ID token.
+        2. Server verifies token signature and claims against Google JWKS, including `sub`.
+        3. Server checks provider linkage in `social_accounts` using (`provider=google`, `provider_user_id=sub`).
+        4. If link exists, signs in linked user and returns `200`.
+        5. If link does not exist:
+           - if a local user exists by email, server creates link and returns `200`;
+           - otherwise server creates user + link and returns `201`.
+        6. If `GOOGLE_CLIENT_ID` is not configured, returns `500`.
       operationId: socialAuth
       parameters:
         - name: provider
@@ -358,9 +370,14 @@ paths:
         content:
           application/vnd.api+json:
             schema:
-              $ref: '#/components/schemas/SocialAuthRequestDocument'
+              oneOf:
+                - $ref: '#/components/schemas/SocialAuthFlatRequest'
+                - $ref: '#/components/schemas/SocialAuthRequestDocument'
             examples:
               google:
+                value:
+                  token: <google-id-token>
+              jsonApiEnvelope:
                 value:
                   data:
                     type: social_auth
@@ -368,7 +385,7 @@ paths:
                       token: <google-id-token>
       responses:
         '200':
-          description: Existing user token issued
+          description: Token issued for an existing linked user (or an existing user linked by email on first social login)
           content:
             application/vnd.api+json:
               schema:
@@ -378,8 +395,19 @@ paths:
                     properties:
                       data:
                         $ref: '#/components/schemas/TokenResource'
+              examples:
+                existingUser:
+                  value:
+                    jsonapi:
+                      version: '1.1'
+                    data:
+                      type: tokens
+                      id: '42'
+                      attributes:
+                        token: <jwt-access-token>
+                        refresh_token: <refresh-token>
         '201':
-          description: New user token issued
+          description: Token issued for a newly created user (social account link created)
           content:
             application/vnd.api+json:
               schema:
@@ -389,12 +417,48 @@ paths:
                     properties:
                       data:
                         $ref: '#/components/schemas/TokenResource'
+              examples:
+                newUser:
+                  value:
+                    jsonapi:
+                      version: '1.1'
+                    data:
+                      type: tokens
+                      id: '43'
+                      attributes:
+                        token: <jwt-access-token>
+                        refresh_token: <refresh-token>
         '400':
           description: Invalid provider, missing token, or invalid token
           content:
             application/vnd.api+json:
               schema:
                 $ref: '#/components/schemas/JsonApiErrorDocument'
+              examples:
+                invalidProvider:
+                  value:
+                    jsonapi:
+                      version: '1.1'
+                    errors:
+                      - status: '400'
+                        title: Invalid provider
+                        detail: The provider is not supported. The only supported provider is Google.
+                missingToken:
+                  value:
+                    jsonapi:
+                      version: '1.1'
+                    errors:
+                      - status: '400'
+                        title: Missing token
+                        detail: Token is missing from the request body.
+                invalidToken:
+                  value:
+                    jsonapi:
+                      version: '1.1'
+                    errors:
+                      - status: '400'
+                        title: Invalid token
+                        detail: The provided token is invalid.
         '406': { $ref: '#/components/responses/JsonApiNotAcceptable' }
         '415': { $ref: '#/components/responses/JsonApiUnsupportedMediaType' }
         '500':
@@ -403,6 +467,15 @@ paths:
             application/vnd.api+json:
               schema:
                 $ref: '#/components/schemas/JsonApiErrorDocument'
+              examples:
+                configError:
+                  value:
+                    jsonapi:
+                      version: '1.1'
+                    errors:
+                      - status: '500'
+                        title: Server configuration error
+                        detail: Google social authentication is not configured.
 
   /v1/apiKeys:
     post:
@@ -705,7 +778,7 @@ components:
       properties:
         token:
           type: string
-          description: Google ID token
+          description: Google ID token (must validate for configured GOOGLE_CLIENT_ID and include a valid `sub` and verified email)
 
     CreateApiKeyAttributes:
       type: object
@@ -809,6 +882,14 @@ components:
               enum: [social_auth]
             attributes:
               $ref: '#/components/schemas/SocialAuthAttributes'
+
+    SocialAuthFlatRequest:
+      type: object
+      required: [token]
+      properties:
+        token:
+          type: string
+          description: Google ID token
 
     CreateApiKeyRequestDocument:
       type: object
