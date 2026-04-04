@@ -16,8 +16,11 @@ Sentry.init({ dsn: 'https://1c887bd73ffd4a8289ba59f77171e47d@o4505426541281280.i
 
 app.on('error', (err, ctx) => {
 	Sentry.withScope(function (scope) {
-		scope.addEventProcessor(function (event) {
-			return Sentry.addRequestDataToEvent(event, ctx.request)
+		scope.setContext('request', {
+			method: ctx.request.method,
+			url: ctx.request.url,
+			headers: ctx.request.headers,
+			query: ctx.request.query
 		})
 		Sentry.captureException(err)
 	})

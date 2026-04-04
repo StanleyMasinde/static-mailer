@@ -9,7 +9,11 @@ import { database } from '../config/database.js'
  */
 export const deliverEmail = async (ctx: Context): Promise<void> => {
 	const { apiKey } = ctx.params
-	const body = ctx.request.body as EmailRequest
+	const rawBody = ctx.request.body
+	if (!rawBody || typeof rawBody !== 'object' || Array.isArray(rawBody)) {
+		ctx.throw(400, 'Invalid request body')
+	}
+	const body = rawBody as unknown as EmailRequest
 
 	try {
 		const keyInDB = await database<ApiKeysUsersJoin>('api_keys')

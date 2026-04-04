@@ -42,7 +42,7 @@ export interface ValidationMessage {
 }
 
 export interface ValidationRuleFactory {
-    validator: (value: string | number) => boolean,
+    validator: (value: unknown) => boolean,
     title: string,
     detail: string
 }
