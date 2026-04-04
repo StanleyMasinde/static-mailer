@@ -18,6 +18,7 @@ const user = {
 }
 
 let token = ''
+let refreshToken = ''
 let userId: number
 let keyUuid = ''
 
@@ -51,6 +52,7 @@ describe('Authentication tests', () => {
 
 		expect(response.status).toBe(201)
 		expect(response.body.meta).toHaveProperty('token')
+		expect(response.body.meta).toHaveProperty('refresh_token')
 		expect(response.body.data.attributes.email).toBe(user.email)
 	})
 
@@ -94,7 +96,34 @@ describe('Authentication tests', () => {
 
 		expect(response.status).toBe(200)
 		expect(response.body.data.attributes).toHaveProperty('token')
+		expect(response.body.data.attributes).toHaveProperty('refresh_token')
 		token = response.body.data.attributes.token
+		refreshToken = response.body.data.attributes.refresh_token
+	})
+
+	it('Refresh endpoint rotates refresh tokens and returns a new access token', async () => {
+		const response = await withJsonApiHeaders(
+			application.post('/v1/token/refresh')
+		)
+			.send({
+				refresh_token: refreshToken
+			})
+
+		expect(response.status).toBe(200)
+		expect(response.body.data.attributes).toHaveProperty('token')
+		expect(response.body.data.attributes).toHaveProperty('refresh_token')
+		expect(response.body.data.attributes.refresh_token).not.toBe(refreshToken)
+
+		const oldTokenReuse = await withJsonApiHeaders(
+			application.post('/v1/token/refresh')
+		)
+			.send({
+				refresh_token: refreshToken
+			})
+		expect(oldTokenReuse.status).toBe(401)
+
+		token = response.body.data.attributes.token
+		refreshToken = response.body.data.attributes.refresh_token
 	})
 
 	it('User login fails without request body', async () => {
@@ -306,5 +335,6 @@ describe('Authentication tests', () => {
 			.send({ token: 'valid-token' })
 		expect(response.status).toBe(201)
 		expect(response.body.data.attributes).toHaveProperty('token')
+		expect(response.body.data.attributes).toHaveProperty('refresh_token')
 	})
 })

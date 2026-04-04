@@ -95,6 +95,8 @@ paths:
                         properties:
                           token:
                             type: string
+                          refresh_token:
+                            type: string
               examples:
                 created:
                   value:
@@ -107,6 +109,7 @@ paths:
                         email: jane@example.com
                     meta:
                       token: <jwt>
+                      refresh_token: <refresh-token>
         '400': { $ref: '#/components/responses/JsonApiBadRequest' }
         '406': { $ref: '#/components/responses/JsonApiNotAcceptable' }
         '415': { $ref: '#/components/responses/JsonApiUnsupportedMediaType' }
@@ -157,6 +160,58 @@ paths:
                       id: '1'
                       attributes:
                         token: <jwt>
+                        refresh_token: <refresh-token>
+        '400': { $ref: '#/components/responses/JsonApiBadRequest' }
+        '401': { $ref: '#/components/responses/JsonApiUnauthorized' }
+        '406': { $ref: '#/components/responses/JsonApiNotAcceptable' }
+        '415': { $ref: '#/components/responses/JsonApiUnsupportedMediaType' }
+        '422':
+          description: Validation error
+          content:
+            application/vnd.api+json:
+              schema:
+                $ref: '#/components/schemas/JsonApiErrorDocument'
+
+  /v1/token/refresh:
+    post:
+      tags: [Auth]
+      summary: Rotate refresh token and issue a new token pair
+      operationId: refreshToken
+      requestBody:
+        required: true
+        content:
+          application/vnd.api+json:
+            schema:
+              $ref: '#/components/schemas/RefreshTokenRequestDocument'
+            examples:
+              refresh:
+                value:
+                  data:
+                    type: tokens
+                    attributes:
+                      refresh_token: <refresh-token>
+      responses:
+        '200':
+          description: Token pair rotated
+          content:
+            application/vnd.api+json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/JsonApiDataDocument'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/TokenResource'
+              examples:
+                ok:
+                  value:
+                    jsonapi: { version: '1.1' }
+                    data:
+                      type: tokens
+                      id: '1'
+                      attributes:
+                        token: <jwt>
+                        refresh_token: <refresh-token>
         '400': { $ref: '#/components/responses/JsonApiBadRequest' }
         '401': { $ref: '#/components/responses/JsonApiUnauthorized' }
         '406': { $ref: '#/components/responses/JsonApiNotAcceptable' }
@@ -624,6 +679,13 @@ components:
           type: string
           format: email
 
+    RefreshTokenAttributes:
+      type: object
+      required: [refresh_token]
+      properties:
+        refresh_token:
+          type: string
+
     PasswordUpdateAttributes:
       type: object
       required: [email, code, password]
@@ -691,6 +753,20 @@ components:
               enum: [tokens]
             attributes:
               $ref: '#/components/schemas/LoginAttributes'
+
+    RefreshTokenRequestDocument:
+      type: object
+      required: [data]
+      properties:
+        data:
+          type: object
+          required: [type, attributes]
+          properties:
+            type:
+              type: string
+              enum: [tokens]
+            attributes:
+              $ref: '#/components/schemas/RefreshTokenAttributes'
 
     PasswordResetRequestDocument:
       type: object
@@ -878,9 +954,10 @@ components:
         id: { type: string }
         attributes:
           type: object
-          required: [token]
+          required: [token, refresh_token]
           properties:
             token: { type: string }
+            refresh_token: { type: string }
 
     ApiKeyAttributes:
       type: object

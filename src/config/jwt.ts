@@ -1,21 +1,24 @@
 import jsonwebtoken from 'jsonwebtoken'
 
 const secret = process.env.JWT_SECRET
+const accessTokenTtl = (process.env.JWT_ACCESS_EXPIRES_IN || '15m') as jsonwebtoken.SignOptions['expiresIn']
 
 if (!secret) {
 	throw new Error('JWT_SECRET is required.')
 }
 
 /**
- * Create a new JWT
+ * Create a new access JWT
  * @param payload The payload to be included in the token
  * @returns The generated JWT
  */
-export const createToken = (payload: jsonwebtoken.JwtPayload): string => {
+export const createAccessToken = (payload: jsonwebtoken.JwtPayload): string => {
 	return jsonwebtoken.sign(payload, secret, {
-		expiresIn: '2 days',
+		expiresIn: accessTokenTtl,
 	})
 }
+
+export const createToken = createAccessToken
 
 /**
  * Verify a token and return the decoded payload

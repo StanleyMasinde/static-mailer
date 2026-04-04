@@ -97,6 +97,16 @@ export interface PasswordResetsTable {
     expires_at: Date
 }
 
+export interface RefreshTokenTable {
+    id?: number,
+    user_id: number,
+    token_hash: string,
+    expires_at: Date,
+    revoked_at?: Date | null,
+    created_at?: Date,
+    updated_at?: Date
+}
+
 export interface ChangePasswordRequest {
     /**
      * The email of the user.

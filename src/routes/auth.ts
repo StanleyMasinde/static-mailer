@@ -1,5 +1,5 @@
 import koaRouter from '@koa/router'
-import { authorize, changeUserPassword, login, me, register, sendPasswordResetInstructions, socialAuth } from '../actions/auth.js'
+import { authorize, changeUserPassword, login, me, refreshAccessToken, register, sendPasswordResetInstructions, socialAuth } from '../actions/auth.js'
 import { validate } from '../actions/validate.js'
 import { rateLimit } from '../middleware/rateLimit.js'
 
@@ -21,6 +21,13 @@ router.post('/login',
 		password: 'required'
 	}),
 	login)
+
+router.post('/token/refresh',
+	rateLimit({ keyPrefix: 'token-refresh', windowMs: 15 * 60_000, maxRequests: 30 }),
+	validate({
+		refresh_token: 'required'
+	}),
+	refreshAccessToken)
 
 router.post('/password-reset',
 	rateLimit({ keyPrefix: 'password-reset', windowMs: 15 * 60_000, maxRequests: 5 }),

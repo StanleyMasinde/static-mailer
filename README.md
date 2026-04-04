@@ -67,6 +67,8 @@ Required for startup validation:
 
 Common optional settings:
 - `APP_PORT` (defaults to `3000`)
+- `JWT_ACCESS_EXPIRES_IN` (defaults to `15m`)
+- `REFRESH_TOKEN_TTL_DAYS` (defaults to `30`)
 - `DASHBOARD_URL` (used by `GET /dashboard` redirect)
 - `CORS_ALLOWLIST` (comma-separated; defaults to `APP_URL`)
 - `COMPANY_NAME`, `COMPANY_URL`
@@ -92,6 +94,7 @@ If these are wrong, the API returns:
 - `GET /dashboard`
 - `POST /v1/register`
 - `POST /v1/login`
+- `POST /v1/token/refresh`
 - `GET /v1/me`
 - `POST /v1/password-reset`
 - `POST /v1/password-update`

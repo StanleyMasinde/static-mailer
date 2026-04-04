@@ -1,10 +1,10 @@
-import { randomInt } from 'node:crypto'
+import { createHash, randomBytes, randomInt } from 'node:crypto'
 import { Context, Next } from 'koa'
 import { JwtPayload } from 'jsonwebtoken'
-import { GoogleJWTPayload, LoginRequest, PasswordResetsTable, RegisterRequest, UserTable, ChangePasswordRequest } from '../types.js'
+import { GoogleJWTPayload, LoginRequest, PasswordResetsTable, RefreshTokenTable, RegisterRequest, UserTable, ChangePasswordRequest } from '../types.js'
 import { database } from '../config/database.js'
-import { compareHash, createHash } from '../config/hash.js'
-import { createToken, verifyToken } from '../config/jwt.js'
+import { compareHash, createHash as createPasswordHash } from '../config/hash.js'
+import { createAccessToken, verifyToken } from '../config/jwt.js'
 import { sendMail } from '../config/mailer.js'
 import { verifyGoogleIdToken } from '../config/googleAuth.js'
 import { getBearerToken, requireObjectBody, setJsonApiData, setJsonApiError } from '../utils/http.js'
@@ -12,10 +12,40 @@ import { getBearerToken, requireObjectBody, setJsonApiData, setJsonApiError } fr
 function buildUserTokenPayload(user: Pick<UserTable, 'id' | 'name' | 'email'>): JwtPayload {
 	return {
 		sub: `${user.id}`,
+		token_type: 'access',
 		attributes: {
 			name: user.name,
 			email: user.email
 		}
+	}
+}
+
+const parsedRefreshTokenTtlDays = Number.parseInt(process.env.REFRESH_TOKEN_TTL_DAYS || '30', 10)
+const REFRESH_TOKEN_TTL_DAYS = Number.isFinite(parsedRefreshTokenTtlDays) && parsedRefreshTokenTtlDays > 0
+	? parsedRefreshTokenTtlDays
+	: 30
+
+function getRefreshTokenExpiry(): Date {
+	const expiresAt = new Date()
+	expiresAt.setDate(expiresAt.getDate() + REFRESH_TOKEN_TTL_DAYS)
+	return expiresAt
+}
+
+function buildRefreshTokenHash(rawRefreshToken: string): string {
+	return createHash('sha256').update(rawRefreshToken).digest('hex')
+}
+
+async function issueTokenPair(user: Pick<UserTable, 'id' | 'name' | 'email'>): Promise<{ token: string, refreshToken: string }> {
+	const token = createAccessToken(buildUserTokenPayload(user))
+	const refreshToken = randomBytes(48).toString('base64url')
+	await database<RefreshTokenTable>('refresh_tokens').insert({
+		user_id: user.id,
+		token_hash: buildRefreshTokenHash(refreshToken),
+		expires_at: getRefreshTokenExpiry()
+	})
+	return {
+		token,
+		refreshToken
 	}
 }
 
@@ -42,7 +72,7 @@ function sendInvalidPasswordResetCodeResponse(ctx: Context) {
  */
 export const register = async (ctx: Context) => {
 	const requestBody = requireObjectBody(ctx) as unknown as RegisterRequest
-	const password = await createHash(requestBody.password)
+	const password = await createPasswordHash(requestBody.password)
 
 	const userExists = await database<UserTable>('users').where('email', requestBody.email).first()
 	if (userExists) {
@@ -66,7 +96,7 @@ export const register = async (ctx: Context) => {
 		ctx.throw('Error registering user')
 	}
 
-	const token = createToken(buildUserTokenPayload(user))
+	const tokens = await issueTokenPair(user)
 	setJsonApiData(ctx, 201, {
 		type: 'users',
 		id: `${user.id}`,
@@ -75,7 +105,8 @@ export const register = async (ctx: Context) => {
 			email: user.email
 		}
 	}, {
-		token
+		token: tokens.token,
+		refresh_token: tokens.refreshToken
 	})
 	sendMail({
 		subject: 'Welcome to Static Mailer',
@@ -95,12 +126,13 @@ export const login = async (ctx: Context) => {
 	if (user) {
 		const passwordMatches = await compareHash(requestBody.password, user.password)
 		if (passwordMatches) {
-			const token = createToken(buildUserTokenPayload(user))
+			const tokens = await issueTokenPair(user)
 			setJsonApiData(ctx, 200, {
 				type: 'tokens',
 				id: `${user.id}`,
 				attributes: {
-					token
+					token: tokens.token,
+					refresh_token: tokens.refreshToken
 				}
 			})
 			return
@@ -161,6 +193,9 @@ export const authorize = async (ctx: Context, next: Next) => {
 
 	try {
 		const user = verifyToken(bearerToken)
+		if (user.token_type && user.token_type !== 'access') {
+			throw new Error('Invalid access token type')
+		}
 		ctx.state.user = user
 		await next()
 	} catch {
@@ -181,7 +216,7 @@ export const sendPasswordResetInstructions = async (ctx: Context) => {
 		const user = await database<UserTable>('users').where({ email: body.email }).first()
 		if (user) {
 			const code = randomInt(99999, 1000000).toString()
-			const codeHash = await createHash(code.toString())
+			const codeHash = await createPasswordHash(code.toString())
 			const date = new Date()
 			date.setMinutes(date.getMinutes() + 60)
 			await database<PasswordResetsTable>('password_resets').insert({
@@ -251,9 +286,10 @@ export const changeUserPassword = async (ctx: Context) => {
 			return
 		}
 
-		const newPassword = await createHash(requestBody.password)
+		const newPassword = await createPasswordHash(requestBody.password)
 		await database<UserTable>('users').where('id', user.id).update({ password: newPassword })
 		await database<PasswordResetsTable>('password_resets').where('user_id', user.id).delete()
+		await database<RefreshTokenTable>('refresh_tokens').where('user_id', user.id).delete()
 		setJsonApiData(ctx, 200, {
 			id: `${user.id}`,
 			type: 'password_resets',
@@ -330,12 +366,13 @@ export const socialAuth = async (ctx: Context) => {
 
 		const userInDb = await database<UserTable>('users').where('email', userInfo.email).first()
 		if (userInDb) {
-			const authToken = createToken(buildUserTokenPayload(userInDb))
+			const tokens = await issueTokenPair(userInDb)
 			setJsonApiData(ctx, 200, {
 				type: 'tokens',
 				id: `${userInDb.id}`,
 				attributes: {
-					token: authToken
+					token: tokens.token,
+					refresh_token: tokens.refreshToken
 				}
 			})
 			return
@@ -347,16 +384,17 @@ export const socialAuth = async (ctx: Context) => {
 			password: ''
 		})
 
-		const authToken = createToken(buildUserTokenPayload({
+		const tokens = await issueTokenPair({
 			id: userId,
 			name: userInfo.name,
 			email: userInfo.email
-		} as Pick<UserTable, 'id' | 'name' | 'email'>))
+		} as Pick<UserTable, 'id' | 'name' | 'email'>)
 		setJsonApiData(ctx, 201, {
 			type: 'tokens',
 			id: `${userId}`,
 			attributes: {
-				token: authToken
+				token: tokens.token,
+				refresh_token: tokens.refreshToken
 			}
 		})
 
@@ -372,4 +410,64 @@ export const socialAuth = async (ctx: Context) => {
 			}
 		})
 	}
+}
+
+/**
+ * Rotate a refresh token and return a new token pair.
+ */
+export const refreshAccessToken = async (ctx: Context) => {
+	const requestBody = requireObjectBody(ctx)
+	const refreshToken = typeof requestBody.refresh_token === 'string'
+		? requestBody.refresh_token.trim()
+		: ''
+
+	if (!refreshToken) {
+		setJsonApiError(ctx, 400, {
+			title: 'Invalid refresh token',
+			detail: 'The refresh_token field is required.'
+		})
+		return
+	}
+
+	const tokenHash = buildRefreshTokenHash(refreshToken)
+	const existingToken = await database<RefreshTokenTable>('refresh_tokens')
+		.where('token_hash', tokenHash)
+		.first()
+
+	if (!existingToken || existingToken.revoked_at || new Date(existingToken.expires_at) <= new Date()) {
+		setJsonApiError(ctx, 401, {
+			title: 'Authentication error',
+			detail: 'The refresh token is invalid or has expired.'
+		})
+		return
+	}
+
+	const user = await database<UserTable>('users')
+		.where('id', existingToken.user_id)
+		.first('id', 'name', 'email')
+
+	if (!user) {
+		await database<RefreshTokenTable>('refresh_tokens')
+			.where('id', existingToken.id)
+			.update({ revoked_at: new Date() })
+		setJsonApiError(ctx, 401, {
+			title: 'Authentication error',
+			detail: 'The refresh token is invalid or has expired.'
+		})
+		return
+	}
+
+	const tokens = await issueTokenPair(user)
+	await database<RefreshTokenTable>('refresh_tokens')
+		.where('id', existingToken.id)
+		.update({ revoked_at: new Date() })
+
+	setJsonApiData(ctx, 200, {
+		type: 'tokens',
+		id: `${user.id}`,
+		attributes: {
+			token: tokens.token,
+			refresh_token: tokens.refreshToken
+		}
+	})
 }
