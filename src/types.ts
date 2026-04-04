@@ -55,6 +55,9 @@ export interface EmailOptions {
 }
 
 export interface GoogleJWTPayload {
+    iss?: string,
+    aud?: string,
+    sub?: string,
     email: string,
     email_verified: boolean,
     azp: string,

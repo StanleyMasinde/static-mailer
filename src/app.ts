@@ -11,20 +11,23 @@ import { userRoutes, allowedUserMethods } from './routes/user.js'
 
 
 const app = new Koa({ proxy: true })
+const sentryDsn = process.env.SENTRY_DSN
 
-Sentry.init({ dsn: 'https://1c887bd73ffd4a8289ba59f77171e47d@o4505426541281280.ingest.sentry.io/4505426543837184' })
+if (sentryDsn) {
+	Sentry.init({ dsn: sentryDsn })
 
-app.on('error', (err, ctx) => {
-	Sentry.withScope(function (scope) {
-		scope.setContext('request', {
-			method: ctx.request.method,
-			url: ctx.request.url,
-			headers: ctx.request.headers,
-			query: ctx.request.query
+	app.on('error', (err, ctx) => {
+		Sentry.withScope(function (scope) {
+			scope.setContext('request', {
+				method: ctx.request.method,
+				url: ctx.request.url,
+				headers: ctx.request.headers,
+				query: ctx.request.query
+			})
+			Sentry.captureException(err)
 		})
-		Sentry.captureException(err)
 	})
-})
+}
 
 
 // Middlewares

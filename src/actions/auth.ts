@@ -5,7 +5,8 @@ import { database } from '../config/database.js'
 import { compareHash, createHash } from '../config/hash.js'
 import { createToken, verifyToken } from '../config/jwt.js'
 import { sendMail } from '../config/mailer.js'
-import { JwtPayload, decode } from 'jsonwebtoken'
+import { JwtPayload } from 'jsonwebtoken'
+import { verifyGoogleIdToken } from '../config/googleAuth.js'
 
 /**
  * Register a new user
@@ -195,21 +196,25 @@ export const sendPasswordResetInstructions = async (ctx: Context) => {
 					code: codeHash,
 					expires_at: date
 				})
-			await sendMail({
-				template: 'passwordreset',
-				subject: 'Password reset notification',
-				receipient: user.email,
-				data: {
-					code
-				}
-			})
-
-			ctx.body = {
-				message: 'Check your email.'
+			try {
+				await sendMail({
+					template: 'passwordreset',
+					subject: 'Password reset notification',
+					receipient: user.email,
+					data: {
+						code
+					}
+				})
+			} catch (error) {
+				ctx.app.emit('error', error as Error, ctx)
 			}
 		}
+
+		ctx.body = {
+			message: 'If the account exists, password reset instructions have been sent.'
+		}
 	} catch (error) {
-		console.log(error)
+		ctx.app.emit('error', error as Error, ctx)
 		ctx.throw('Server Error')
 	}
 }
@@ -234,6 +239,8 @@ export const changeUserPassword = async (ctx: Context) => {
 
 		const resetCode = await database<PasswordResetsTable>('password_resets')
 			.where('user_id', user.id)
+			.where('expires_at', '>', new Date())
+			.orderBy('id', 'desc')
 			.first()
 
 		if (!resetCode) {
@@ -249,6 +256,9 @@ export const changeUserPassword = async (ctx: Context) => {
 		await database<UserTable>('users')
 			.where('id', user.id)
 			.update({ 'password': newPassword })
+		await database<PasswordResetsTable>('password_resets')
+			.where('user_id', user.id)
+			.delete()
 		ctx.header['content-type'] = 'application/vnd.api+json'
 		ctx.body = {
 			data: {
@@ -262,7 +272,7 @@ export const changeUserPassword = async (ctx: Context) => {
 		}
 		return
 	} catch (error) {
-		console.log(error)
+		ctx.app.emit('error', error as Error, ctx)
 		ctx.throw('Something broke!')
 	}
 }
@@ -307,16 +317,22 @@ export const socialAuth = async (ctx: Context) => {
 			: body && typeof body === 'object' && !Array.isArray(body) && typeof (body as Record<string, unknown>).token === 'string'
 				? (body as { token: string }).token
 				: null
-		console.log(token)
 		if (!token) {
 			return missingTokenError()
 		}
 
-		const decodedToken = decode(token)
-		if (!decodedToken || typeof decodedToken === 'string') {
+		const expectedAudience = process.env.GOOGLE_CLIENT_ID
+		if (!expectedAudience) {
+			return socialAuthMisconfiguredError()
+		}
+
+		let userInfo: GoogleJWTPayload
+		try {
+			userInfo = await verifyGoogleIdToken(token, expectedAudience)
+		} catch {
 			return invalidTokenError()
 		}
-		const userInfo = decodedToken as unknown as GoogleJWTPayload
+
 		const email = userInfo.email
 		const userInDb = await database<UserTable>('users').where('email', email).first()
 
@@ -403,6 +419,19 @@ export const socialAuth = async (ctx: Context) => {
 					status: 400,
 					title: 'Invalid token',
 					detail: 'The provided token is invalid.'
+				}
+			]
+		}
+	}
+
+	function socialAuthMisconfiguredError() {
+		ctx.status = 500
+		return ctx.body = {
+			errors: [
+				{
+					status: 500,
+					title: 'Server configuration error',
+					detail: 'Google social authentication is not configured.'
 				}
 			]
 		}

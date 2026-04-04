@@ -1,5 +1,4 @@
 import koaRouter from '@koa/router'
-import { koaBody } from 'koa-body'
 import { authorize, changeUserPassword, login, me, register, sendPasswordResetInstructions, socialAuth } from '../actions/auth.js'
 import { validate } from '../actions/validate.js'
 
@@ -38,7 +37,7 @@ router.post('/password-update',
 
 router.get('/me', authorize, me)
 
-router.post('/social-auth/:provider', koaBody(), socialAuth)
+router.post('/social-auth/:provider', socialAuth)
 
 export const authRoutes = () => router.routes()
 export const allowedAuthMethods = () => router.allowedMethods()
