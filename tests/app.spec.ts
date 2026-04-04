@@ -5,6 +5,26 @@ import { describe, expect, test, } from 'vitest'
 const application = app.callback()
 
 describe('General route tests', () => {
+	test('Serves OpenAPI spec', async () => {
+		const response = await request(application)
+			.get('/openapi.yaml')
+		expect(response.status).toEqual(200)
+		expect(response.headers['content-type']).toContain('text/yaml')
+		expect(response.text).toContain('openapi: 3.2.0')
+		await database.destroy()
+	})
+
+	test('Serves Swagger-style docs UI', async () => {
+		const response = await request(application)
+			.get('/docs')
+		expect(response.status).toEqual(200)
+		expect(response.headers['content-type']).toContain('text/html')
+		expect(response.text).toContain('StaticMailer API Docs')
+		expect(response.text).toContain('/openapi.yaml')
+		expect(response.text).toContain('SwaggerUIBundle')
+		await database.destroy()
+	})
+
 	test('Ping should return 200', async () => {
 		const response = await request(application)
 			.get('/ping')

@@ -1,0 +1,85 @@
+doctype html
+html(lang='en')
+  head
+    meta(charset='utf-8')
+    meta(name='viewport' content='width=device-width, initial-scale=1')
+    title StaticMailer API Docs
+    link(rel='preconnect' href='https://fonts.googleapis.com')
+    link(rel='preconnect' href='https://fonts.gstatic.com' crossorigin)
+    link(rel='stylesheet' href='https://fonts.googleapis.com/css2?family=Manrope:wght@500;700&display=swap')
+    link(rel='stylesheet' href='https://cdn.jsdelivr.net/npm/swagger-ui-dist@5/swagger-ui.css')
+    style.
+      :root {
+        --bg: #f4f6f8;
+        --panel: #ffffff;
+        --text: #1f2933;
+        --muted: #617182;
+        --accent: #0f766e;
+        --border: #d9e2ec;
+      }
+      html, body { height: 100%; }
+      body {
+        margin: 0;
+        font-family: "Manrope", "Segoe UI", sans-serif;
+        background:
+          radial-gradient(1200px 300px at 20% -20%, #d8f2ed 0%, transparent 55%),
+          radial-gradient(1000px 280px at 100% -10%, #e6eef6 0%, transparent 50%),
+          var(--bg);
+        color: var(--text);
+      }
+      .frame {
+        max-width: 1100px;
+        margin: 24px auto;
+        border: 1px solid var(--border);
+        border-radius: 14px;
+        background: var(--panel);
+        box-shadow: 0 16px 40px rgba(31, 41, 51, 0.08);
+        overflow: hidden;
+      }
+      .header {
+        padding: 14px 20px;
+        border-bottom: 1px solid var(--border);
+        display: flex;
+        align-items: baseline;
+        justify-content: space-between;
+        gap: 12px;
+      }
+      .title {
+        font-size: 16px;
+        font-weight: 700;
+        letter-spacing: 0.01em;
+      }
+      .subtitle {
+        color: var(--muted);
+        font-size: 13px;
+        font-weight: 500;
+      }
+      #swagger-ui { padding: 8px; }
+      .swagger-ui .topbar { display: none; }
+      .swagger-ui .info { margin: 10px 0 0; }
+      .swagger-ui .scheme-container { box-shadow: none; border: 1px solid var(--border); border-radius: 10px; }
+      .swagger-ui .opblock.opblock-post { border-color: #b8e4df; background: #f3fbfa; }
+      .swagger-ui .opblock.opblock-get { border-color: #bed8ef; background: #f4f9fe; }
+      .swagger-ui .opblock.opblock-delete { border-color: #ffd1cf; background: #fff6f5; }
+      .swagger-ui .btn.execute { background: var(--accent); border-color: var(--accent); }
+      .swagger-ui .btn.authorize { color: var(--accent); border-color: var(--accent); }
+  body
+    main.frame
+      .header
+        .title StaticMailer API Docs
+        .subtitle
+          | OpenAPI 3.2 at 
+          code= specUrl
+      #swagger-ui
+    script(src='https://cdn.jsdelivr.net/npm/swagger-ui-dist@5/swagger-ui-bundle.js')
+    script.
+      window.ui = SwaggerUIBundle({
+        url: '#{specUrl}',
+        dom_id: '#swagger-ui',
+        deepLinking: true,
+        docExpansion: 'list',
+        defaultModelsExpandDepth: -1,
+        displayRequestDuration: true,
+        filter: true,
+        tryItOutEnabled: true
+      })

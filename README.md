@@ -101,6 +101,11 @@ If these are wrong, the API returns:
 - `DELETE /v1/apiKeys/:uuid`
 - `POST /api/v1/deliver/:apiKey`
 
+## OpenAPI
+- OpenAPI 3.x specification: `openapi.yaml`
+- Served by API at: `GET /openapi.yaml`
+- Interactive docs UI (Swagger-style): `GET /docs`
+
 ## Example requests
 Register:
 ```bash

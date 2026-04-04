@@ -1,0 +1,970 @@
+openapi: 3.2.0
+info:
+  title: StaticMailer API
+  version: 1.1.0
+  description: |
+    StaticMailer API for authentication, API key lifecycle, and public email delivery.
+
+    JSON:API contract for `/v1/*` and `/api/v1/*`:
+    - `Accept: application/vnd.api+json`
+    - `Content-Type: application/vnd.api+json` for POST/PUT/PATCH
+    - Request bodies use JSON:API envelopes (`data.type` + `data.attributes`)
+servers:
+  - url: https://localhost:3000
+    description: Local development
+tags:
+  - name: Health
+  - name: Dashboard
+  - name: Auth
+  - name: API Keys
+  - name: Delivery
+paths:
+  /ping:
+    get:
+      tags: [Health]
+      summary: Health check
+      operationId: ping
+      responses:
+        '200':
+          description: Pong
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [message]
+                properties:
+                  message:
+                    type: string
+                    example: Pong
+
+  /dashboard:
+    get:
+      tags: [Dashboard]
+      summary: Redirect to configured dashboard URL
+      operationId: dashboard
+      responses:
+        '302':
+          description: Redirect to dashboard URL
+        '404':
+          description: Dashboard URL not configured
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [errors]
+                properties:
+                  errors:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/JsonApiError'
+
+  /v1/register:
+    post:
+      tags: [Auth]
+      summary: Register user
+      operationId: register
+      requestBody:
+        required: true
+        content:
+          application/vnd.api+json:
+            schema:
+              $ref: '#/components/schemas/RegisterRequestDocument'
+            examples:
+              register:
+                value:
+                  data:
+                    type: users
+                    attributes:
+                      name: Jane Doe
+                      email: jane@example.com
+                      password: supersecretpassword
+      responses:
+        '201':
+          description: User created
+          content:
+            application/vnd.api+json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/JsonApiDataDocument'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/UserResource'
+                      meta:
+                        type: object
+                        properties:
+                          token:
+                            type: string
+              examples:
+                created:
+                  value:
+                    jsonapi: { version: '1.1' }
+                    data:
+                      type: users
+                      id: '1'
+                      attributes:
+                        name: Jane Doe
+                        email: jane@example.com
+                    meta:
+                      token: <jwt>
+        '400': { $ref: '#/components/responses/JsonApiBadRequest' }
+        '406': { $ref: '#/components/responses/JsonApiNotAcceptable' }
+        '415': { $ref: '#/components/responses/JsonApiUnsupportedMediaType' }
+        '422':
+          description: Validation error or duplicate email
+          content:
+            application/vnd.api+json:
+              schema:
+                $ref: '#/components/schemas/JsonApiErrorDocument'
+
+  /v1/login:
+    post:
+      tags: [Auth]
+      summary: Login with email/password
+      operationId: login
+      requestBody:
+        required: true
+        content:
+          application/vnd.api+json:
+            schema:
+              $ref: '#/components/schemas/LoginRequestDocument'
+            examples:
+              login:
+                value:
+                  data:
+                    type: tokens
+                    attributes:
+                      email: jane@example.com
+                      password: supersecretpassword
+      responses:
+        '200':
+          description: Authenticated
+          content:
+            application/vnd.api+json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/JsonApiDataDocument'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/TokenResource'
+              examples:
+                ok:
+                  value:
+                    jsonapi: { version: '1.1' }
+                    data:
+                      type: tokens
+                      id: '1'
+                      attributes:
+                        token: <jwt>
+        '400': { $ref: '#/components/responses/JsonApiBadRequest' }
+        '401': { $ref: '#/components/responses/JsonApiUnauthorized' }
+        '406': { $ref: '#/components/responses/JsonApiNotAcceptable' }
+        '415': { $ref: '#/components/responses/JsonApiUnsupportedMediaType' }
+        '422':
+          description: Validation error
+          content:
+            application/vnd.api+json:
+              schema:
+                $ref: '#/components/schemas/JsonApiErrorDocument'
+
+  /v1/me:
+    get:
+      tags: [Auth]
+      summary: Get current user
+      operationId: me
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Current user
+          content:
+            application/vnd.api+json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/JsonApiDataDocument'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/UserDetailResource'
+        '401': { $ref: '#/components/responses/JsonApiUnauthorized' }
+        '404':
+          description: Authenticated user not found
+          content:
+            application/vnd.api+json:
+              schema:
+                $ref: '#/components/schemas/JsonApiErrorDocument'
+        '406': { $ref: '#/components/responses/JsonApiNotAcceptable' }
+
+  /v1/password-reset:
+    post:
+      tags: [Auth]
+      summary: Request password reset instructions
+      operationId: passwordReset
+      requestBody:
+        required: true
+        content:
+          application/vnd.api+json:
+            schema:
+              $ref: '#/components/schemas/PasswordResetRequestDocument'
+            examples:
+              request:
+                value:
+                  data:
+                    type: password_reset_requests
+                    attributes:
+                      email: jane@example.com
+      responses:
+        '200':
+          description: Generic success response
+          content:
+            application/vnd.api+json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/JsonApiDataDocument'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/PasswordResetRequestResource'
+              examples:
+                ok:
+                  value:
+                    jsonapi: { version: '1.1' }
+                    data:
+                      type: password_reset_requests
+                      attributes:
+                        message: If the account exists, password reset instructions have been sent.
+        '400': { $ref: '#/components/responses/JsonApiBadRequest' }
+        '406': { $ref: '#/components/responses/JsonApiNotAcceptable' }
+        '415': { $ref: '#/components/responses/JsonApiUnsupportedMediaType' }
+        '422':
+          description: Validation error
+          content:
+            application/vnd.api+json:
+              schema:
+                $ref: '#/components/schemas/JsonApiErrorDocument'
+
+  /v1/password-update:
+    post:
+      tags: [Auth]
+      summary: Update password with reset code
+      operationId: passwordUpdate
+      requestBody:
+        required: true
+        content:
+          application/vnd.api+json:
+            schema:
+              $ref: '#/components/schemas/PasswordUpdateRequestDocument'
+            examples:
+              update:
+                value:
+                  data:
+                    type: password_resets
+                    attributes:
+                      email: jane@example.com
+                      code: '123456'
+                      password: newstrongpassword
+      responses:
+        '200':
+          description: Password updated
+          content:
+            application/vnd.api+json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/JsonApiDataDocument'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/PasswordResetResultResource'
+        '400': { $ref: '#/components/responses/JsonApiBadRequest' }
+        '406': { $ref: '#/components/responses/JsonApiNotAcceptable' }
+        '415': { $ref: '#/components/responses/JsonApiUnsupportedMediaType' }
+        '422':
+          description: Validation error or invalid/expired code
+          content:
+            application/vnd.api+json:
+              schema:
+                $ref: '#/components/schemas/JsonApiErrorDocument'
+
+  /v1/social-auth/{provider}:
+    post:
+      tags: [Auth]
+      summary: Social auth login
+      operationId: socialAuth
+      parameters:
+        - name: provider
+          in: path
+          required: true
+          schema:
+            type: string
+            enum: [google]
+      requestBody:
+        required: true
+        content:
+          application/vnd.api+json:
+            schema:
+              $ref: '#/components/schemas/SocialAuthRequestDocument'
+            examples:
+              google:
+                value:
+                  data:
+                    type: social_auth
+                    attributes:
+                      token: <google-id-token>
+      responses:
+        '200':
+          description: Existing user token issued
+          content:
+            application/vnd.api+json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/JsonApiDataDocument'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/TokenResource'
+        '201':
+          description: New user token issued
+          content:
+            application/vnd.api+json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/JsonApiDataDocument'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/TokenResource'
+        '400':
+          description: Invalid provider, missing token, or invalid token
+          content:
+            application/vnd.api+json:
+              schema:
+                $ref: '#/components/schemas/JsonApiErrorDocument'
+        '406': { $ref: '#/components/responses/JsonApiNotAcceptable' }
+        '415': { $ref: '#/components/responses/JsonApiUnsupportedMediaType' }
+        '500':
+          description: Google auth not configured
+          content:
+            application/vnd.api+json:
+              schema:
+                $ref: '#/components/schemas/JsonApiErrorDocument'
+
+  /v1/apiKeys:
+    post:
+      tags: [API Keys]
+      summary: Create API key
+      operationId: createApiKey
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/vnd.api+json:
+            schema:
+              $ref: '#/components/schemas/CreateApiKeyRequestDocument'
+            examples:
+              create:
+                value:
+                  data:
+                    type: api_keys
+                    attributes:
+                      name: portfolio-site
+      responses:
+        '201':
+          description: API key created. `meta.raw_key` is shown once.
+          content:
+            application/vnd.api+json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/JsonApiDataDocument'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/ApiKeyResource'
+                      meta:
+                        type: object
+                        properties:
+                          raw_key:
+                            type: string
+              examples:
+                created:
+                  value:
+                    jsonapi: { version: '1.1' }
+                    data:
+                      type: api_keys
+                      id: 7a4d8f63-a7df-46dc-8c10-20569566aabc
+                      attributes:
+                        name: portfolio-site
+                        key_last4: A1B2
+                        created_at: '2026-04-04T13:00:00.000Z'
+                        updated_at: '2026-04-04T13:00:00.000Z'
+                        last_used_at: null
+                    meta:
+                      raw_key: sk_live_example_raw_key
+        '400': { $ref: '#/components/responses/JsonApiBadRequest' }
+        '401': { $ref: '#/components/responses/JsonApiUnauthorized' }
+        '406': { $ref: '#/components/responses/JsonApiNotAcceptable' }
+        '415': { $ref: '#/components/responses/JsonApiUnsupportedMediaType' }
+        '422':
+          description: Validation error
+          content:
+            application/vnd.api+json:
+              schema:
+                $ref: '#/components/schemas/JsonApiErrorDocument'
+        '500':
+          description: Server error
+          content:
+            application/vnd.api+json:
+              schema:
+                $ref: '#/components/schemas/JsonApiErrorDocument'
+
+    get:
+      tags: [API Keys]
+      summary: List current user's API keys
+      operationId: getApiKeys
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: API key list
+          content:
+            application/vnd.api+json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/JsonApiDataDocument'
+                  - type: object
+                    properties:
+                      data:
+                        type: array
+                        items:
+                          $ref: '#/components/schemas/ApiKeyResource'
+        '401': { $ref: '#/components/responses/JsonApiUnauthorized' }
+        '406': { $ref: '#/components/responses/JsonApiNotAcceptable' }
+
+  /v1/apiKeys/{uuid}:
+    delete:
+      tags: [API Keys]
+      summary: Delete API key
+      operationId: deleteApiKey
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: uuid
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '204':
+          description: Deleted
+        '401': { $ref: '#/components/responses/JsonApiUnauthorized' }
+        '403':
+          description: Deleting another user's key
+          content:
+            application/vnd.api+json:
+              schema:
+                $ref: '#/components/schemas/JsonApiErrorDocument'
+        '404':
+          description: API key not found
+          content:
+            application/vnd.api+json:
+              schema:
+                $ref: '#/components/schemas/JsonApiErrorDocument'
+        '406': { $ref: '#/components/responses/JsonApiNotAcceptable' }
+
+  /api/v1/deliver/{apiKey}:
+    post:
+      tags: [Delivery]
+      summary: Deliver email via raw API key
+      operationId: deliverEmail
+      parameters:
+        - name: apiKey
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/vnd.api+json:
+            schema:
+              $ref: '#/components/schemas/DeliverRequestDocument'
+            examples:
+              deliver:
+                value:
+                  data:
+                    type: deliveries
+                    attributes:
+                      subject: Hello
+                      email: visitor@example.com
+                      message: I would like to work with you.
+      responses:
+        '202':
+          description: Accepted for delivery
+          content:
+            application/vnd.api+json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/JsonApiDataDocument'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/DeliveryResource'
+              examples:
+                accepted:
+                  value:
+                    jsonapi: { version: '1.1' }
+                    data:
+                      type: deliveries
+                      attributes:
+                        status: accepted
+                        message: Message accepted for delivery.
+        '400': { $ref: '#/components/responses/JsonApiBadRequest' }
+        '404':
+          description: Invalid API key
+          content:
+            application/vnd.api+json:
+              schema:
+                $ref: '#/components/schemas/JsonApiErrorDocument'
+        '406': { $ref: '#/components/responses/JsonApiNotAcceptable' }
+        '415': { $ref: '#/components/responses/JsonApiUnsupportedMediaType' }
+        '422':
+          description: Validation error
+          content:
+            application/vnd.api+json:
+              schema:
+                $ref: '#/components/schemas/JsonApiErrorDocument'
+        '429':
+          description: Rate limit exceeded
+          content:
+            application/vnd.api+json:
+              schema:
+                $ref: '#/components/schemas/JsonApiErrorDocument'
+        '502':
+          description: Mail transport failed
+          content:
+            application/vnd.api+json:
+              schema:
+                $ref: '#/components/schemas/JsonApiErrorDocument'
+        '500':
+          description: Server error
+          content:
+            application/vnd.api+json:
+              schema:
+                $ref: '#/components/schemas/JsonApiErrorDocument'
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  responses:
+    JsonApiBadRequest:
+      description: Bad Request
+      content:
+        application/vnd.api+json:
+          schema:
+            $ref: '#/components/schemas/JsonApiErrorDocument'
+    JsonApiUnauthorized:
+      description: Unauthorized
+      headers:
+        WWW-Authenticate:
+          description: Bearer challenge
+          schema:
+            type: string
+            example: Bearer
+      content:
+        application/vnd.api+json:
+          schema:
+            $ref: '#/components/schemas/JsonApiErrorDocument'
+    JsonApiNotAcceptable:
+      description: Unsupported Accept header
+      content:
+        application/vnd.api+json:
+          schema:
+            $ref: '#/components/schemas/JsonApiErrorDocument'
+    JsonApiUnsupportedMediaType:
+      description: Unsupported Content-Type header
+      content:
+        application/vnd.api+json:
+          schema:
+            $ref: '#/components/schemas/JsonApiErrorDocument'
+
+  schemas:
+    RegisterAttributes:
+      type: object
+      required: [name, email, password]
+      properties:
+        name:
+          type: string
+        email:
+          type: string
+          format: email
+        password:
+          type: string
+
+    LoginAttributes:
+      type: object
+      required: [email, password]
+      properties:
+        email:
+          type: string
+          format: email
+        password:
+          type: string
+
+    PasswordResetAttributes:
+      type: object
+      required: [email]
+      properties:
+        email:
+          type: string
+          format: email
+
+    PasswordUpdateAttributes:
+      type: object
+      required: [email, code, password]
+      properties:
+        email:
+          type: string
+          format: email
+        code:
+          type: string
+          description: Password reset code sent to email
+        password:
+          type: string
+
+    SocialAuthAttributes:
+      type: object
+      required: [token]
+      properties:
+        token:
+          type: string
+          description: Google ID token
+
+    CreateApiKeyAttributes:
+      type: object
+      required: [name]
+      properties:
+        name:
+          type: string
+
+    DeliverAttributes:
+      type: object
+      required: [subject, email, message]
+      properties:
+        subject:
+          type: string
+        email:
+          type: string
+          format: email
+        message:
+          type: string
+
+    RegisterRequestDocument:
+      type: object
+      required: [data]
+      properties:
+        data:
+          type: object
+          required: [type, attributes]
+          properties:
+            type:
+              type: string
+              enum: [users]
+            attributes:
+              $ref: '#/components/schemas/RegisterAttributes'
+
+    LoginRequestDocument:
+      type: object
+      required: [data]
+      properties:
+        data:
+          type: object
+          required: [type, attributes]
+          properties:
+            type:
+              type: string
+              enum: [tokens]
+            attributes:
+              $ref: '#/components/schemas/LoginAttributes'
+
+    PasswordResetRequestDocument:
+      type: object
+      required: [data]
+      properties:
+        data:
+          type: object
+          required: [type, attributes]
+          properties:
+            type:
+              type: string
+              enum: [password_reset_requests]
+            attributes:
+              $ref: '#/components/schemas/PasswordResetAttributes'
+
+    PasswordUpdateRequestDocument:
+      type: object
+      required: [data]
+      properties:
+        data:
+          type: object
+          required: [type, attributes]
+          properties:
+            type:
+              type: string
+              enum: [password_resets]
+            attributes:
+              $ref: '#/components/schemas/PasswordUpdateAttributes'
+
+    SocialAuthRequestDocument:
+      type: object
+      required: [data]
+      properties:
+        data:
+          type: object
+          required: [type, attributes]
+          properties:
+            type:
+              type: string
+              enum: [social_auth]
+            attributes:
+              $ref: '#/components/schemas/SocialAuthAttributes'
+
+    CreateApiKeyRequestDocument:
+      type: object
+      required: [data]
+      properties:
+        data:
+          type: object
+          required: [type, attributes]
+          properties:
+            type:
+              type: string
+              enum: [api_keys]
+            attributes:
+              $ref: '#/components/schemas/CreateApiKeyAttributes'
+
+    DeliverRequestDocument:
+      type: object
+      required: [data]
+      properties:
+        data:
+          type: object
+          required: [type, attributes]
+          properties:
+            type:
+              type: string
+              enum: [deliveries]
+            attributes:
+              $ref: '#/components/schemas/DeliverAttributes'
+
+    JsonApiDocument:
+      type: object
+      properties:
+        jsonapi:
+          type: object
+          properties:
+            version:
+              type: string
+              example: '1.1'
+        links:
+          type: object
+          additionalProperties: true
+        meta:
+          type: object
+          additionalProperties: true
+
+    JsonApiDataDocument:
+      allOf:
+        - $ref: '#/components/schemas/JsonApiDocument'
+        - type: object
+          required: [data]
+          properties:
+            data:
+              oneOf:
+                - type: object
+                - type: array
+                  items: { type: object }
+                - type: 'null'
+
+    JsonApiErrorSource:
+      type: object
+      properties:
+        pointer: { type: string }
+        parameter: { type: string }
+        header: { type: string }
+
+    JsonApiError:
+      type: object
+      required: [title]
+      properties:
+        status:
+          oneOf:
+            - type: string
+            - type: integer
+        code: { type: string }
+        title: { type: string }
+        detail: { type: string }
+        source:
+          $ref: '#/components/schemas/JsonApiErrorSource'
+        meta:
+          type: object
+          additionalProperties: true
+
+    JsonApiErrorDocument:
+      allOf:
+        - $ref: '#/components/schemas/JsonApiDocument'
+        - type: object
+          required: [errors]
+          properties:
+            errors:
+              type: array
+              items:
+                $ref: '#/components/schemas/JsonApiError'
+
+    UserAttributes:
+      type: object
+      properties:
+        name: { type: string }
+        email:
+          type: string
+          format: email
+
+    UserDetailAttributes:
+      allOf:
+        - $ref: '#/components/schemas/UserAttributes'
+        - type: object
+          properties:
+            created_at:
+              type: string
+              format: date-time
+            updated_at:
+              type: string
+              format: date-time
+
+    UserResource:
+      type: object
+      required: [type, id, attributes]
+      properties:
+        type:
+          type: string
+          example: users
+        id: { type: string }
+        attributes:
+          $ref: '#/components/schemas/UserAttributes'
+
+    UserDetailResource:
+      type: object
+      required: [type, id, attributes]
+      properties:
+        type:
+          type: string
+          example: users
+        id: { type: string }
+        attributes:
+          $ref: '#/components/schemas/UserDetailAttributes'
+
+    TokenResource:
+      type: object
+      required: [type, id, attributes]
+      properties:
+        type:
+          type: string
+          example: tokens
+        id: { type: string }
+        attributes:
+          type: object
+          required: [token]
+          properties:
+            token: { type: string }
+
+    ApiKeyAttributes:
+      type: object
+      properties:
+        uuid:
+          type: string
+          format: uuid
+        name: { type: string }
+        key_last4:
+          type:
+            - string
+            - 'null'
+          minLength: 4
+          maxLength: 4
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+        last_used_at:
+          type:
+            - string
+            - 'null'
+          format: date-time
+
+    ApiKeyResource:
+      type: object
+      required: [type, id, attributes]
+      properties:
+        type:
+          type: string
+          example: api_keys
+        id:
+          type: string
+          format: uuid
+        attributes:
+          $ref: '#/components/schemas/ApiKeyAttributes'
+
+    DeliveryResource:
+      type: object
+      required: [type, attributes]
+      properties:
+        type:
+          type: string
+          example: deliveries
+        attributes:
+          type: object
+          properties:
+            status:
+              type: string
+              example: accepted
+            message:
+              type: string
+              example: Message accepted for delivery.
+
+    PasswordResetRequestResource:
+      type: object
+      required: [type, attributes]
+      properties:
+        type:
+          type: string
+          example: password_reset_requests
+        attributes:
+          type: object
+          properties:
+            message:
+              type: string
+              example: If the account exists, password reset instructions have been sent.
+
+    PasswordResetResultResource:
+      type: object
+      required: [type, id, attributes]
+      properties:
+        type:
+          type: string
+          example: password_resets
+        id: { type: string }
+        attributes:
+          type: object
+          properties:
+            status:
+              type: string
+              example: success
+            message:
+              type: string
+              example: Your password has been successfully reset.
