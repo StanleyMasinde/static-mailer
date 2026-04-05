@@ -6,7 +6,7 @@ export default [
 		ignores: ['dist/**', 'node_modules/**']
 	},
 	{
-		files: ['src/**/*.ts', 'tests/**/*.ts', 'knexfile.ts'],
+		files: ['src/**/*.ts', 'tests/**/*.ts'],
 		languageOptions: {
 			parser: tsParser,
 			ecmaVersion: 'latest',
