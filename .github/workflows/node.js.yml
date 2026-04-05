@@ -30,10 +30,6 @@ jobs:
         run: pnpm i
       - name: Lint 🧐
         run: |
-          if [ -f eslint.config.js ] || [ -f .eslintrc ] || [ -f .eslintrc.js ] || [ -f .eslintrc.cjs ] || [ -f .eslintrc.json ]; then
             pnpm run lint
-          else
-            echo "No ESLint config found, skipping lint."
-          fi
       - name: Test 🧪
         run: pnpm test
