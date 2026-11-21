@@ -80,6 +80,40 @@ Common optional settings:
 
 Use `.env.example` as the canonical template.
 
+## Send mail through Sendy
+
+Use Sendy as the SMTP provider for StaticMailer. Before you begin, verify a
+sending domain in Sendy and create a Sendy API key with permission to send mail.
+See [Sendy’s SMTP documentation](https://usesendy.com/docs/smtp).
+
+1. Set these values in your local `.env` or your production service’s environment
+   file.
+
+   ```dotenv
+   MAILER_HOST=smtp.usesendy.com
+   MAILER_PORT=2525
+   MAILER_USERNAME=apikey
+   MAILER_PASSWORD=SENDY_API_KEY
+   MAILER_SECURE=false
+   MAILER_REQUIRE_TLS=true
+   MAILER_FROM_NAME="Static Mailer"
+   MAILER_FROM_EMAIL=no-reply@example.com
+   ```
+
+   Replace `SENDY_API_KEY` with the full Sendy key, including its `snd_key_`
+   prefix, and use a sender address on your verified domain. Keep the literal
+   username `apikey`. The two TLS settings tell StaticMailer to upgrade the
+   SMTP connection with STARTTLS before authenticating.
+
+2. Restart StaticMailer to load the settings.
+3. Submit a test message using the delivery request under
+   [Example requests](#example-requests). Use a
+   StaticMailer API key in the request URL. StaticMailer sends the message to
+   the email address on the account that owns that key and uses the form
+   submitter’s email as `Reply-To`.
+4. Check **Emails** in the Sendy console for the message’s delivery status.
+   StaticMailer returns HTTP `202` when Sendy accepts the SMTP submission.
+
 ## API behavior and headers
 For `/v1/*` and `/api/v1/*` endpoints:
 - Set `Accept: application/vnd.api+json`.
