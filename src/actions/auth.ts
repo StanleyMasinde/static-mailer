@@ -1,8 +1,9 @@
 import { createHash, randomBytes, randomInt } from 'node:crypto'
 import { Context, Next } from 'koa'
+import { transaction, type TransactionContext } from 'mevn-orm'
 import { JwtPayload } from 'jsonwebtoken'
-import { GitHubAuthPayload, GoogleJWTPayload, LoginRequest, PasswordResetsTable, RefreshTokenTable, RegisterRequest, UserTable, ChangePasswordRequest, SocialAccountTable } from '../types.js'
-import { database } from '../config/database.js'
+import { GitHubAuthPayload, GoogleJWTPayload, LoginRequest, RegisterRequest, ChangePasswordRequest } from '../types.js'
+import { PasswordReset, RefreshToken, SocialAccount, User } from '../config/models.js'
 import { compareHash, createHash as createPasswordHash } from '../config/hash.js'
 import { createAccessToken, verifyToken } from '../config/jwt.js'
 import { sendMail } from '../config/mailer.js'
@@ -10,7 +11,7 @@ import { verifyGoogleIdToken } from '../config/googleAuth.js'
 import { verifyGitHubAccessToken } from '../config/githubAuth.js'
 import { getBearerToken, requireObjectBody, setJsonApiData, setJsonApiError } from '../utils/http.js'
 
-function buildUserTokenPayload(user: Pick<UserTable, 'id' | 'name' | 'email'>): JwtPayload {
+function buildUserTokenPayload(user: Pick<User, 'id' | 'name' | 'email'>): JwtPayload {
 	return {
 		sub: `${user.id}`,
 		token_type: 'access',
@@ -36,14 +37,21 @@ function buildRefreshTokenHash(rawRefreshToken: string): string {
 	return createHash('sha256').update(rawRefreshToken).digest('hex')
 }
 
-async function issueTokenPair(user: Pick<UserTable, 'id' | 'name' | 'email'>): Promise<{ token: string, refreshToken: string }> {
+async function issueTokenPair(user: Pick<User, 'id' | 'name' | 'email'>, trx?: TransactionContext): Promise<{ token: string, refreshToken: string }> {
 	const token = createAccessToken(buildUserTokenPayload(user))
 	const refreshToken = randomBytes(48).toString('base64url')
-	await database<RefreshTokenTable>('refresh_tokens').insert({
+	const attributes = {
 		user_id: user.id,
 		token_hash: buildRefreshTokenHash(refreshToken),
 		expires_at: getRefreshTokenExpiry()
-	})
+	}
+
+	if (trx) {
+		await trx.model(RefreshToken).create(attributes)
+	} else {
+		await RefreshToken.create(attributes)
+	}
+
 	return {
 		token,
 		refreshToken
@@ -75,7 +83,7 @@ export const register = async (ctx: Context) => {
 	const requestBody = requireObjectBody(ctx) as unknown as RegisterRequest
 	const password = await createPasswordHash(requestBody.password)
 
-	const userExists = await database<UserTable>('users').where('email', requestBody.email).first()
+	const userExists = await User.where({ email: requestBody.email }).exists()
 	if (userExists) {
 		setJsonApiError(ctx, 422, {
 			source: {
@@ -87,15 +95,11 @@ export const register = async (ctx: Context) => {
 		return
 	}
 
-	const [userId] = await database<UserTable>('users').insert({
+	const user = await User.create({
 		name: requestBody.name,
 		email: requestBody.email,
 		password
 	})
-	const user = await database<UserTable>('users').where('id', userId).first('id', 'name', 'email')
-	if (!user) {
-		ctx.throw('Error registering user')
-	}
 
 	const tokens = await issueTokenPair(user)
 	setJsonApiData(ctx, 201, {
@@ -113,7 +117,7 @@ export const register = async (ctx: Context) => {
 		subject: 'Welcome to Static Mailer',
 		receipient: user.email,
 		template: 'welcome',
-		data: user
+		data: { id: user.id, name: user.name, email: user.email }
 	})
 }
 
@@ -123,7 +127,7 @@ export const register = async (ctx: Context) => {
  */
 export const login = async (ctx: Context) => {
 	const requestBody = requireObjectBody(ctx) as unknown as LoginRequest
-	const user = await database<UserTable>('users').where('email', requestBody.email).first()
+	const user = await User.where({ email: requestBody.email }).first(['id', 'name', 'email', 'password'])
 	if (user) {
 		const passwordMatches = await compareHash(requestBody.password, user.password)
 		if (passwordMatches) {
@@ -157,9 +161,12 @@ export const me = async (ctx: Context) => {
 	}
 
 	const userInToken = verifyToken(bearerToken)
-	const user = await database<UserTable>('users')
-		.where('id', userInToken.sub)
-		.first()
+	if (userInToken.sub === undefined) {
+		sendUnauthorizedResponse(ctx)
+		return
+	}
+
+	const user = await User.find(userInToken.sub, ['id', 'name', 'email', 'created_at', 'updated_at'])
 	if (!user) {
 		setJsonApiError(ctx, 404, {
 			title: 'Not Found',
@@ -214,13 +221,13 @@ export const sendPasswordResetInstructions = async (ctx: Context) => {
 			ctx.throw(400, 'Invalid request body')
 		}
 
-		const user = await database<UserTable>('users').where({ email: body.email }).first()
+		const user = await User.where({ email: body.email }).first(['id', 'email'])
 		if (user) {
 			const code = randomInt(99999, 1000000).toString()
 			const codeHash = await createPasswordHash(code.toString())
 			const date = new Date()
 			date.setMinutes(date.getMinutes() + 60)
-			await database<PasswordResetsTable>('password_resets').insert({
+			await PasswordReset.create({
 				user_id: user.id,
 				code: codeHash,
 				expires_at: date
@@ -261,38 +268,41 @@ export const sendPasswordResetInstructions = async (ctx: Context) => {
 export const changeUserPassword = async (ctx: Context) => {
 	try {
 		const requestBody = requireObjectBody(ctx) as unknown as ChangePasswordRequest
-		const user = await database<UserTable>('users')
-			.where('email', requestBody.email)
-			.first()
+		const userId = await transaction(async (trx) => {
+			const users = trx.model(User)
+			const user = await users.where({ email: requestBody.email }).forUpdate().first('id')
+			if (!user) {
+				return undefined
+			}
 
-		if (!user) {
+			const resets = trx.model(PasswordReset)
+			const now = new Date()
+			// Match the MySQL client's local timestamp binding for the Date filter.
+			const mysqlNow = new Date(now.getTime() - now.getTimezoneOffset() * 60_000)
+			const resetCode = await resets.where({ user_id: user.id })
+				.where('expires_at', '>', mysqlNow)
+				.orderBy('id', 'desc')
+				.forUpdate()
+				.first(['id', 'code'])
+			if (!resetCode || !await compareHash(requestBody.code, resetCode.code)) {
+				return undefined
+			}
+
+			const password = await createPasswordHash(requestBody.password)
+			await users.where({ id: user.id }).update({ password })
+			await resets.where({ user_id: user.id }).destroy()
+			await trx.model(RefreshToken).where({ user_id: user.id }).destroy()
+
+			return user.id
+		})
+
+		if (userId === undefined) {
 			sendInvalidPasswordResetCodeResponse(ctx)
 			return
 		}
 
-		const resetCode = await database<PasswordResetsTable>('password_resets')
-			.where('user_id', user.id)
-			.where('expires_at', '>', new Date())
-			.orderBy('id', 'desc')
-			.first()
-
-		if (!resetCode) {
-			sendInvalidPasswordResetCodeResponse(ctx)
-			return
-		}
-
-		const codeMatches = await compareHash(requestBody.code, resetCode.code)
-		if (!codeMatches) {
-			sendInvalidPasswordResetCodeResponse(ctx)
-			return
-		}
-
-		const newPassword = await createPasswordHash(requestBody.password)
-		await database<UserTable>('users').where('id', user.id).update({ password: newPassword })
-		await database<PasswordResetsTable>('password_resets').where('user_id', user.id).delete()
-		await database<RefreshTokenTable>('refresh_tokens').where('user_id', user.id).delete()
 		setJsonApiData(ctx, 200, {
-			id: `${user.id}`,
+			id: `${userId}`,
 			type: 'password_resets',
 			attributes: {
 				status: 'success',
@@ -378,74 +388,7 @@ export const socialAuth = async (ctx: Context) => {
 			return
 		}
 
-		const socialAccount = await database<SocialAccountTable>('social_accounts')
-			.where({
-				provider: 'google',
-				provider_user_id: providerUserId
-			})
-			.first()
-		if (socialAccount) {
-			const linkedUser = await database<UserTable>('users')
-				.where('id', socialAccount.user_id)
-				.first('id', 'name', 'email')
-			if (!linkedUser) {
-				setJsonApiError(ctx, 401, {
-					title: 'Authentication error',
-					detail: 'These credentials do not match our records.'
-				})
-				return
-			}
-			const tokens = await issueTokenPair(linkedUser)
-			setJsonApiData(ctx, 200, {
-				type: 'tokens',
-				id: `${linkedUser.id}`,
-				attributes: {
-					token: tokens.token,
-					refresh_token: tokens.refreshToken
-				}
-			})
-
-			if (socialAccount.provider_email !== userInfo.email) {
-				await database<SocialAccountTable>('social_accounts')
-					.where('id', socialAccount.id as number)
-					.update({ provider_email: userInfo.email })
-			}
-			return
-		}
-
-		let user = await database<UserTable>('users')
-			.where('email', userInfo.email)
-			.first('id', 'name', 'email')
-		const isNewUser = !user
-		if (!user) {
-			const [userId] = await database<UserTable>('users').insert({
-				name: userInfo.name,
-				email: userInfo.email,
-				password: ''
-			})
-			user = {
-				id: userId,
-				name: userInfo.name,
-				email: userInfo.email
-			} as Pick<UserTable, 'id' | 'name' | 'email'>
-		}
-
-		await database<SocialAccountTable>('social_accounts').insert({
-			user_id: user.id,
-			provider: 'google',
-			provider_user_id: providerUserId,
-			provider_email: userInfo.email
-		})
-
-		const tokens = await issueTokenPair(user)
-		setJsonApiData(ctx, isNewUser ? 201 : 200, {
-			type: 'tokens',
-			id: `${user.id}`,
-			attributes: {
-				token: tokens.token,
-				refresh_token: tokens.refreshToken
-			}
-		})
+		const isNewUser = await signInWithSocialAccount('google', providerUserId, userInfo)
 
 		if (isNewUser) {
 			sendMail({
@@ -500,74 +443,7 @@ export const socialAuth = async (ctx: Context) => {
 			return
 		}
 
-		const socialAccount = await database<SocialAccountTable>('social_accounts')
-			.where({
-				provider: 'github',
-				provider_user_id: providerUserId
-			})
-			.first()
-		if (socialAccount) {
-			const linkedUser = await database<UserTable>('users')
-				.where('id', socialAccount.user_id)
-				.first('id', 'name', 'email')
-			if (!linkedUser) {
-				setJsonApiError(ctx, 401, {
-					title: 'Authentication error',
-					detail: 'These credentials do not match our records.'
-				})
-				return
-			}
-			const tokens = await issueTokenPair(linkedUser)
-			setJsonApiData(ctx, 200, {
-				type: 'tokens',
-				id: `${linkedUser.id}`,
-				attributes: {
-					token: tokens.token,
-					refresh_token: tokens.refreshToken
-				}
-			})
-
-			if (socialAccount.provider_email !== userInfo.email) {
-				await database<SocialAccountTable>('social_accounts')
-					.where('id', socialAccount.id as number)
-					.update({ provider_email: userInfo.email })
-			}
-			return
-		}
-
-		let user = await database<UserTable>('users')
-			.where('email', userInfo.email)
-			.first('id', 'name', 'email')
-		const isNewUser = !user
-		if (!user) {
-			const [userId] = await database<UserTable>('users').insert({
-				name: userInfo.name,
-				email: userInfo.email,
-				password: ''
-			})
-			user = {
-				id: userId,
-				name: userInfo.name,
-				email: userInfo.email
-			} as Pick<UserTable, 'id' | 'name' | 'email'>
-		}
-
-		await database<SocialAccountTable>('social_accounts').insert({
-			user_id: user.id,
-			provider: 'github',
-			provider_user_id: providerUserId,
-			provider_email: userInfo.email
-		})
-
-		const tokens = await issueTokenPair(user)
-		setJsonApiData(ctx, isNewUser ? 201 : 200, {
-			type: 'tokens',
-			id: `${user.id}`,
-			attributes: {
-				token: tokens.token,
-				refresh_token: tokens.refreshToken
-			}
-		})
+		const isNewUser = await signInWithSocialAccount('github', providerUserId, userInfo)
 
 		if (isNewUser) {
 			sendMail({
@@ -581,6 +457,57 @@ export const socialAuth = async (ctx: Context) => {
 			})
 		}
 	}
+	async function signInWithSocialAccount(provider: SocialAccount['provider'], providerUserId: string, userInfo: Pick<User, 'name' | 'email'>) {
+		const result = await transaction(async (trx) => {
+			const accounts = trx.model(SocialAccount)
+			const users = trx.model(User)
+			const account = await accounts.where({ provider, provider_user_id: providerUserId }).first()
+			let user = account
+				? await account.user().first(['id', 'name', 'email'])
+				: await users.where({ email: userInfo.email }).first(['id', 'name', 'email'])
+
+			if (account && !user) {
+				return undefined
+			}
+
+			const isNewUser = !user
+			user ??= await users.create({ name: userInfo.name, email: userInfo.email, password: '' })
+
+			if (!account) {
+				await accounts.create({
+					user_id: user.id,
+					provider,
+					provider_user_id: providerUserId,
+					provider_email: userInfo.email
+				})
+			} else if (account.provider_email !== userInfo.email) {
+				await accounts.where({ id: account.id }).update({ provider_email: userInfo.email })
+			}
+
+			const tokens = await issueTokenPair(user, trx)
+			return { userId: user.id, isNewUser, tokens }
+		})
+
+		if (!result) {
+			setJsonApiError(ctx, 401, {
+				title: 'Authentication error',
+				detail: 'These credentials do not match our records.'
+			})
+			return false
+		}
+
+		setJsonApiData(ctx, result.isNewUser ? 201 : 200, {
+			type: 'tokens',
+			id: `${result.userId}`,
+			attributes: {
+				token: result.tokens.token,
+				refresh_token: result.tokens.refreshToken
+			}
+		})
+
+		return result.isNewUser
+	}
+
 }
 
 /**
@@ -601,41 +528,36 @@ export const refreshAccessToken = async (ctx: Context) => {
 	}
 
 	const tokenHash = buildRefreshTokenHash(refreshToken)
-	const existingToken = await database<RefreshTokenTable>('refresh_tokens')
-		.where('token_hash', tokenHash)
-		.first()
+	const userId = await RefreshToken.where({ token_hash: tokenHash }).value('user_id')
+	const tokens = userId === undefined ? undefined : await transaction(async (trx) => {
+		// Lock the user first, in the same order as password reset.
+		const user = await trx.model(User).where({ id: userId })
+			.forUpdate()
+			.first(['id', 'name', 'email'])
+		const refreshTokens = trx.model(RefreshToken)
+		const existingToken = await refreshTokens.where({ token_hash: tokenHash, user_id: userId })
+			.whereNull('revoked_at')
+			.forUpdate()
+			.first(['id', 'expires_at'])
+		if (!existingToken || new Date(existingToken.expires_at) <= new Date()) {
+			return undefined
+		}
 
-	if (!existingToken || existingToken.revoked_at || new Date(existingToken.expires_at) <= new Date()) {
+		await refreshTokens.where({ id: existingToken.id }).update({ revoked_at: new Date() })
+		return user ? issueTokenPair(user, trx) : undefined
+	})
+
+	if (!tokens) {
 		setJsonApiError(ctx, 401, {
 			title: 'Authentication error',
 			detail: 'The refresh token is invalid or has expired.'
 		})
 		return
 	}
-
-	const user = await database<UserTable>('users')
-		.where('id', existingToken.user_id)
-		.first('id', 'name', 'email')
-
-	if (!user) {
-		await database<RefreshTokenTable>('refresh_tokens')
-			.where('id', existingToken.id)
-			.update({ revoked_at: new Date() })
-		setJsonApiError(ctx, 401, {
-			title: 'Authentication error',
-			detail: 'The refresh token is invalid or has expired.'
-		})
-		return
-	}
-
-	const tokens = await issueTokenPair(user)
-	await database<RefreshTokenTable>('refresh_tokens')
-		.where('id', existingToken.id)
-		.update({ revoked_at: new Date() })
 
 	setJsonApiData(ctx, 200, {
 		type: 'tokens',
-		id: `${user.id}`,
+		id: `${userId}`,
 		attributes: {
 			token: tokens.token,
 			refresh_token: tokens.refreshToken
