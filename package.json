@@ -1,30 +1,26 @@
 {
-  "name": "static-mailer",
-  "version": "1.0.0",
-  "description": "Send emails from static websites",
-  "main": "dist/app.js",
-  "type": "module",
-  "directories": {
-    "test": "tests"
-  },
-  "repository": "git+ssh://git@github.com/StanleyMasinde/static-send.git",
-  "private": true,
-  "scripts": {
-    "start": "node dist/server.js",
-    "dev": "nodemon dist/server.js",
-    "pretest": "tsc && node dist/scripts/migrateLatest.js",
-    "test": "vitest",
-    "build": "tsc",
-    "lint": "eslint ."
-  },
-  "keywords": [
-    "Static",
-    "send",
-    "emails",
-    "saas"
-  ],
   "author": "Stanley Masinde",
-  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/StanleyMasinde/static-send/issues"
+  },
+  "dependencies": {
+    "@koa/cors": "^5.0.0",
+    "@koa/router": "^15.4.0",
+    "@sentry/node": "^10.47.0",
+    "bcrypt": "^6.0.0",
+    "dotenv": "^17.4.0",
+    "jsonwebtoken": "^9.0.3",
+    "knex": "^3.2.9",
+    "koa": "^3.2.0",
+    "koa-body": "^7.0.1",
+    "koa-ratelimit": "^6.0.0",
+    "mevn-orm": "^4.10.0",
+    "mysql2": "^3.20.0",
+    "nodemailer": "^8.0.4",
+    "pug": "^3.0.4",
+    "uuid": "^13.0.0"
+  },
+  "description": "Send emails from static websites",
   "devDependencies": {
     "@faker-js/faker": "^10.4.0",
     "@types/bcrypt": "^6.0.0",
@@ -44,25 +40,29 @@
     "typescript": "^6.0.2",
     "vitest": "^4.1.2"
   },
-  "dependencies": {
-    "@koa/cors": "^5.0.0",
-    "@koa/router": "^15.4.0",
-    "@sentry/node": "^10.47.0",
-    "bcrypt": "^6.0.0",
-    "dotenv": "^17.4.0",
-    "jsonwebtoken": "^9.0.3",
-    "knex": "^3.2.9",
-    "koa": "^3.2.0",
-    "koa-body": "^7.0.1",
-    "koa-ratelimit": "^6.0.0",
-    "mevn-orm": "^4.10.0",
-    "mysql2": "^3.20.0",
-    "nodemailer": "^8.0.4",
-    "pug": "^3.0.4",
-    "uuid": "^13.0.0"
+  "directories": {
+    "test": "tests"
   },
-  "bugs": {
-    "url": "https://github.com/StanleyMasinde/static-send/issues"
+  "homepage": "https://github.com/StanleyMasinde/static-send#readme",
+  "keywords": [
+    "Static",
+    "send",
+    "emails",
+    "saas"
+  ],
+  "license": "ISC",
+  "main": "dist/app.js",
+  "name": "static-mailer",
+  "private": true,
+  "repository": "git+ssh://git@github.com/StanleyMasinde/static-send.git",
+  "scripts": {
+    "build": "tsc",
+    "dev": "nodemon dist/server.js",
+    "lint": "eslint .",
+    "pretest": "tsc && node dist/scripts/migrateLatest.js",
+    "start": "node dist/server.js",
+    "test": "vitest"
   },
-  "homepage": "https://github.com/StanleyMasinde/static-send#readme"
+  "type": "module",
+  "version": "1.1.0"
 }
