@@ -64,7 +64,7 @@ export const createApiKey = async (ctx: Context) => {
 export const getUserApiKeys = async (ctx: Context) => {
 	try {
 		const user: JwtPayload = ctx.state.user
-		if (user.sub === undefined) {
+		if (!user.sub) {
 			ctx.throw(500, 'Internal Server Error')
 		}
 
