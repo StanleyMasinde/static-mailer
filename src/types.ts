@@ -15,28 +15,6 @@ export interface LoginRequest {
     password: string
 }
 
-export interface UserTable {
-    [key: string]: string | number | Date;
-    id: number,
-    name: string,
-    email: string,
-    password: string,
-    created_at: Date,
-    updated_at: Date
-}
-
-export interface ApiKeyTable {
-    uuid?: string,
-    user_id?: number,
-    name: string,
-    key?: string | null,
-    key_hash?: string,
-    key_last4?: string,
-    created_at: Date,
-    updated_at: Date,
-    last_used_at: Date
-}
-
 export interface ValidationMessage {
     source: {
         pointer: string
@@ -77,50 +55,6 @@ export interface GitHubAuthPayload {
 	sub: string
 	email: string
 	name: string
-}
-
-export interface EmailSubmissionTable {
-    id?: number
-    key_uuid?: string
-    subject?: string
-    message?: string
-    delivery_status?: 'accepted' | 'failed'
-    delivered_at?: Date
-    sender_ip?: string
-    created_at?: string
-    updated_at?: string
-}
-
-export interface ApiKeysUsersJoin {
-    email?: string
-    uuid?: string
-}
-
-export interface PasswordResetsTable {
-    id: number,
-    user_id: number,
-    code: string,
-    expires_at: Date
-}
-
-export interface RefreshTokenTable {
-    id?: number,
-    user_id: number,
-    token_hash: string,
-    expires_at: Date,
-    revoked_at?: Date | null,
-    created_at?: Date,
-    updated_at?: Date
-}
-
-export interface SocialAccountTable {
-    id?: number,
-    user_id: number,
-    provider: 'google' | 'github',
-    provider_user_id: string,
-    provider_email: string,
-    created_at?: Date,
-    updated_at?: Date
 }
 
 export interface ChangePasswordRequest {

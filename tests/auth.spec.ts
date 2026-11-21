@@ -103,14 +103,15 @@ describe('Authentication tests', () => {
 	})
 
 	it('Refresh endpoint rotates refresh tokens and returns a new access token', async () => {
-		const response = await withJsonApiHeaders(
-			application.post('/v1/token/refresh')
+		const responses = await Promise.all(
+			Array.from({ length: 2 }, () =>
+				withJsonApiHeaders(application.post('/v1/token/refresh'))
+					.send({ refresh_token: refreshToken })
+			)
 		)
-			.send({
-				refresh_token: refreshToken
-			})
+		expect(responses.map(({ status }) => status).sort()).toEqual([200, 401])
 
-		expect(response.status).toBe(200)
+		const response = responses.find(({ status }) => status === 200)!
 		expect(response.body.data.attributes).toHaveProperty('token')
 		expect(response.body.data.attributes).toHaveProperty('refresh_token')
 		expect(response.body.data.attributes.refresh_token).not.toBe(refreshToken)
@@ -273,18 +274,20 @@ describe('Authentication tests', () => {
 			expires_at: new Date(Date.now() + (60 * 60 * 1000))
 		})
 
-		const response = await withJsonApiHeaders(
-			application.post('/v1/password-update')
+		const password = faker.internet.password()
+		const responses = await Promise.all(
+			Array.from({ length: 2 }, () =>
+				withJsonApiHeaders(application.post('/v1/password-update'))
+					.send({ email: user.email, code: validCode, password })
+			)
 		)
-			.send({
-				email: user.email,
-				code: validCode,
-				password: faker.internet.password()
-			})
-		expect(response.status).toBe(200)
+		expect(responses.map(({ status }) => status).sort()).toEqual([200, 422])
 
 		const resetRows = await database('password_resets').where('user_id', userId)
 		expect(resetRows.length).toBe(0)
+
+		const refreshRows = await database('refresh_tokens').where('user_id', userId)
+		expect(refreshRows.length).toBe(0)
 	})
 
 	it('Social auth rejects unsupported providers', async () => {

@@ -39,8 +39,8 @@ importers:
         specifier: ^6.0.0
         version: 6.0.0
       mevn-orm:
-        specifier: ^4.1.0
-        version: 4.1.0(knex@3.2.9(mysql2@3.20.0(@types/node@25.5.2)))(mysql2@3.20.0(@types/node@25.5.2))
+        specifier: ^4.10.0
+        version: 4.10.0(knex@3.2.9(mysql2@3.20.0(@types/node@25.5.2)))(mysql2@3.20.0(@types/node@25.5.2))
       mysql2:
         specifier: ^3.20.0
         version: 3.20.0(@types/node@25.5.2)
@@ -1610,11 +1610,17 @@ packages:
     resolution: {integrity: sha512-iclAHeNqNm68zFtnZ0e+1L2yUIdvzNoauKU4WBA3VvH/vPFieF7qfRlwUZU+DA9P9bPXIS90ulxoUoCH23sV2w==}
     engines: {node: '>= 0.6'}
 
-  mevn-orm@4.1.0:
-    resolution: {integrity: sha512-pBp8jcouxx4g4Jq2K4k2Zm3rN/yGV0JOrIdK9m7m0xg86RySbJNpS0hOXZD4hsIuGXzEMA2U2UfP2NM/n9qmQQ==}
+  mevn-orm@4.10.0:
+    resolution: {integrity: sha512-UAdW+Og8ahBitAdgtss/xPCtCaxgTnxnjfTNMvbiuIIMXzEvQXv28IlGJfCCwnKY6XLIdKGuMbpWu1Q6hHXLfQ==}
     peerDependencies:
+      db0: ^0.4.0
       knex: ^3.0.0
       mysql2: ^3.9.3
+    peerDependenciesMeta:
+      db0:
+        optional: true
+      mysql2:
+        optional: true
 
   mime-db@1.52.0:
     resolution: {integrity: sha512-sPU4uV7dYlvtWJxwwxHD0PuihVNiE7TyAbQ5SWxDCB9mUYvOgroQOwYQQOKPJ8CIbE+1ETVlOoK1UC2nU3gYvg==}
@@ -3690,7 +3696,7 @@ snapshots:
 
   methods@1.1.2: {}
 
-  mevn-orm@4.1.0(knex@3.2.9(mysql2@3.20.0(@types/node@25.5.2)))(mysql2@3.20.0(@types/node@25.5.2)):
+  mevn-orm@4.10.0(knex@3.2.9(mysql2@3.20.0(@types/node@25.5.2)))(mysql2@3.20.0(@types/node@25.5.2)):
     dependencies:
       knex: 3.2.9(mysql2@3.20.0(@types/node@25.5.2))
       mysql2: 3.20.0(@types/node@25.5.2)
