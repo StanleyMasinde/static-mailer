@@ -1,6 +1,6 @@
 import { readFileSync } from 'fs'
 import nodemailer from 'nodemailer'
-import SMTPTransport from 'nodemailer/lib/smtp-transport/index.js'
+import type SMTPPool from 'nodemailer/lib/smtp-pool/index.js'
 import { renderFile } from 'pug'
 import { EmailOptions } from '../types.js'
 
@@ -78,7 +78,8 @@ function substituteTemplateTokens(templateText: string, data: Record<string, str
 	return substitutedText
 }
 
-const transportConfig: SMTPTransport.Options = {
+const transportConfig: SMTPPool.Options = {
+	pool: true,
 	host: MAILER_HOST,
 	port: Number.parseInt(MAILER_PORT, 10),
 	secure: MAILER_SECURE === 'true',
